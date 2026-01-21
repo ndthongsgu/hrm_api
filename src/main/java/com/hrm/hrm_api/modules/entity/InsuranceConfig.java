@@ -12,10 +12,8 @@ import java.math.BigDecimal;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class InsuranceConfig {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+public class InsuranceConfig extends BaseEntity {
+    // Inherit id, timestamps and audit fields from BaseEntity
 
     private String type; // SOCIAL, HEALTH, UNEMPLOYMENT
 

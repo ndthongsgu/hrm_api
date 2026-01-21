@@ -30,7 +30,7 @@ public class TaxBracketController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<BaseResponse<TaxBracket>> getById(@PathVariable Long id) {
+    public ResponseEntity<BaseResponse<TaxBracket>> getById(@PathVariable java.util.UUID id) {
         return ResponseEntity.ok(BaseResponse.ok(service.findById(id)));
     }
 
@@ -40,12 +40,12 @@ public class TaxBracketController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<BaseResponse<TaxBracket>> update(@PathVariable Long id, @Valid @RequestBody TaxBracket payload) {
+    public ResponseEntity<BaseResponse<TaxBracket>> update(@PathVariable java.util.UUID id, @Valid @RequestBody TaxBracket payload) {
         return ResponseEntity.ok(BaseResponse.ok(service.update(id, payload)));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<BaseResponse<Void>> delete(@PathVariable Long id) {
+    public ResponseEntity<BaseResponse<Void>> delete(@PathVariable java.util.UUID id) {
         service.delete(id);
         return ResponseEntity.ok(BaseResponse.ok(null));
     }

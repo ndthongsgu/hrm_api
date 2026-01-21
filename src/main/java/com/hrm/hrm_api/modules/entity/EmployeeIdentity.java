@@ -13,10 +13,8 @@ import java.time.LocalDateTime;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class EmployeeIdentity {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+public class EmployeeIdentity extends BaseEntity {
+    // Inherit id, timestamps and audit fields from BaseEntity
 
     @ManyToOne
     @JoinColumn(name = "employee_id")

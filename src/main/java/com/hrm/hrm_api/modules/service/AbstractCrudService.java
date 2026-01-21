@@ -6,12 +6,14 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.UUID;
+
 public abstract class AbstractCrudService<T> implements CrudService<T> {
 
-    protected final JpaRepository<T, Long> repository;
+    protected final JpaRepository<T, UUID> repository;
     private final Class<T> entityClass;
 
-    protected AbstractCrudService(JpaRepository<T, Long> repository, Class<T> entityClass) {
+    protected AbstractCrudService(JpaRepository<T, UUID> repository, Class<T> entityClass) {
         this.repository = repository;
         this.entityClass = entityClass;
     }
@@ -22,7 +24,7 @@ public abstract class AbstractCrudService<T> implements CrudService<T> {
     }
 
     @Override
-    public T findById(Long id) {
+    public T findById(UUID id) {
         return repository.findById(id).orElseThrow(() -> new ResourceNotFoundException(entityClass, id));
     }
 
@@ -34,7 +36,7 @@ public abstract class AbstractCrudService<T> implements CrudService<T> {
 
     @Override
     @Transactional
-    public T update(Long id, T entity) {
+    public T update(UUID id, T entity) {
         if (!repository.existsById(id)) {
             throw new ResourceNotFoundException(entityClass, id);
         }
@@ -50,7 +52,7 @@ public abstract class AbstractCrudService<T> implements CrudService<T> {
 
     @Override
     @Transactional
-    public void delete(Long id) {
+    public void delete(UUID id) {
         if (!repository.existsById(id)) {
             throw new ResourceNotFoundException(entityClass, id);
         }

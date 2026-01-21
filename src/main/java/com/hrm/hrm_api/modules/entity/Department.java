@@ -10,10 +10,8 @@ import lombok.AllArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class Department {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+public class Department extends BaseEntity {
+    // Inherit id, timestamps and audit fields from BaseEntity
 
     private String name;
 

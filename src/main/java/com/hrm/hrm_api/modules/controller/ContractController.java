@@ -30,7 +30,7 @@ public class ContractController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<BaseResponse<Contract>> getById(@PathVariable Long id) {
+    public ResponseEntity<BaseResponse<Contract>> getById(@PathVariable java.util.UUID id) {
         return ResponseEntity.ok(BaseResponse.ok(contractService.findById(id)));
     }
 
@@ -40,12 +40,12 @@ public class ContractController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<BaseResponse<Contract>> update(@PathVariable Long id, @Valid @RequestBody Contract payload) {
+    public ResponseEntity<BaseResponse<Contract>> update(@PathVariable java.util.UUID id, @Valid @RequestBody Contract payload) {
         return ResponseEntity.ok(BaseResponse.ok(contractService.update(id, payload)));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<BaseResponse<Void>> delete(@PathVariable Long id) {
+    public ResponseEntity<BaseResponse<Void>> delete(@PathVariable java.util.UUID id) {
         contractService.delete(id);
         return ResponseEntity.ok(BaseResponse.ok(null));
     }

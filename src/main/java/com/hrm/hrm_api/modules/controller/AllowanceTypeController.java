@@ -30,7 +30,7 @@ public class AllowanceTypeController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<BaseResponse<AllowanceType>> getById(@PathVariable Long id) {
+    public ResponseEntity<BaseResponse<AllowanceType>> getById(@PathVariable java.util.UUID id) {
         return ResponseEntity.ok(BaseResponse.ok(allowanceTypeService.findById(id)));
     }
 
@@ -40,12 +40,12 @@ public class AllowanceTypeController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<BaseResponse<AllowanceType>> update(@PathVariable Long id, @Valid @RequestBody AllowanceType payload) {
+    public ResponseEntity<BaseResponse<AllowanceType>> update(@PathVariable java.util.UUID id, @Valid @RequestBody AllowanceType payload) {
         return ResponseEntity.ok(BaseResponse.ok(allowanceTypeService.update(id, payload)));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<BaseResponse<Void>> delete(@PathVariable Long id) {
+    public ResponseEntity<BaseResponse<Void>> delete(@PathVariable java.util.UUID id) {
         allowanceTypeService.delete(id);
         return ResponseEntity.ok(BaseResponse.ok(null));
     }

@@ -12,10 +12,8 @@ import java.time.LocalDate;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class EmployeeShiftAssignment {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+public class EmployeeShiftAssignment extends BaseEntity {
+    // Inherit id, timestamps and audit fields from BaseEntity
 
     @ManyToOne
     @JoinColumn(name = "employee_id")

@@ -12,10 +12,8 @@ import java.math.BigDecimal;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class Position {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+public class Position extends BaseEntity {
+    // Inherit id, timestamps and audit fields from BaseEntity
 
     @ManyToOne
     @JoinColumn(name = "department_id")

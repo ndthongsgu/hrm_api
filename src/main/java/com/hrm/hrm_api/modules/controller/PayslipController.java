@@ -30,7 +30,7 @@ public class PayslipController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<BaseResponse<Payslip>> getById(@PathVariable Long id) {
+    public ResponseEntity<BaseResponse<Payslip>> getById(@PathVariable java.util.UUID id) {
         return ResponseEntity.ok(BaseResponse.ok(service.findById(id)));
     }
 
@@ -40,12 +40,12 @@ public class PayslipController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<BaseResponse<Payslip>> update(@PathVariable Long id, @Valid @RequestBody Payslip payload) {
+    public ResponseEntity<BaseResponse<Payslip>> update(@PathVariable java.util.UUID id, @Valid @RequestBody Payslip payload) {
         return ResponseEntity.ok(BaseResponse.ok(service.update(id, payload)));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<BaseResponse<Void>> delete(@PathVariable Long id) {
+    public ResponseEntity<BaseResponse<Void>> delete(@PathVariable java.util.UUID id) {
         service.delete(id);
         return ResponseEntity.ok(BaseResponse.ok(null));
     }

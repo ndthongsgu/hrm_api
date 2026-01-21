@@ -30,7 +30,7 @@ public class EmployeeShiftAssignmentController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<BaseResponse<EmployeeShiftAssignment>> getById(@PathVariable Long id) {
+    public ResponseEntity<BaseResponse<EmployeeShiftAssignment>> getById(@PathVariable java.util.UUID id) {
         return ResponseEntity.ok(BaseResponse.ok(service.findById(id)));
     }
 
@@ -40,12 +40,12 @@ public class EmployeeShiftAssignmentController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<BaseResponse<EmployeeShiftAssignment>> update(@PathVariable Long id, @Valid @RequestBody EmployeeShiftAssignment payload) {
+    public ResponseEntity<BaseResponse<EmployeeShiftAssignment>> update(@PathVariable java.util.UUID id, @Valid @RequestBody EmployeeShiftAssignment payload) {
         return ResponseEntity.ok(BaseResponse.ok(service.update(id, payload)));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<BaseResponse<Void>> delete(@PathVariable Long id) {
+    public ResponseEntity<BaseResponse<Void>> delete(@PathVariable java.util.UUID id) {
         service.delete(id);
         return ResponseEntity.ok(BaseResponse.ok(null));
     }

@@ -9,8 +9,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-
+import org.springframework.web.bind.annotation.*;import java.util.UUID;
 import jakarta.validation.Valid;
 
 @RestController
@@ -30,7 +29,7 @@ public class PositionController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<BaseResponse<Position>> getById(@PathVariable Long id) {
+    public ResponseEntity<BaseResponse<Position>> getById(@PathVariable java.util.UUID id) {
         return ResponseEntity.ok(BaseResponse.ok(positionService.findById(id)));
     }
 
@@ -40,12 +39,12 @@ public class PositionController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<BaseResponse<Position>> update(@PathVariable Long id, @Valid @RequestBody Position payload) {
+    public ResponseEntity<BaseResponse<Position>> update(@PathVariable java.util.UUID id, @Valid @RequestBody Position payload) {
         return ResponseEntity.ok(BaseResponse.ok(positionService.update(id, payload)));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<BaseResponse<Void>> delete(@PathVariable Long id) {
+    public ResponseEntity<BaseResponse<Void>> delete(@PathVariable java.util.UUID id) {
         positionService.delete(id);
         return ResponseEntity.ok(BaseResponse.ok(null));
     }

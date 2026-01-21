@@ -30,7 +30,7 @@ public class DepartmentController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<BaseResponse<Department>> getById(@PathVariable Long id) {
+    public ResponseEntity<BaseResponse<Department>> getById(@PathVariable java.util.UUID id) {
         return ResponseEntity.ok(BaseResponse.ok(departmentService.findById(id)));
     }
 
@@ -40,12 +40,12 @@ public class DepartmentController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<BaseResponse<Department>> update(@PathVariable Long id, @Valid @RequestBody Department payload) {
+    public ResponseEntity<BaseResponse<Department>> update(@PathVariable java.util.UUID id, @Valid @RequestBody Department payload) {
         return ResponseEntity.ok(BaseResponse.ok(departmentService.update(id, payload)));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<BaseResponse<Void>> delete(@PathVariable Long id) {
+    public ResponseEntity<BaseResponse<Void>> delete(@PathVariable java.util.UUID id) {
         departmentService.delete(id);
         return ResponseEntity.ok(BaseResponse.ok(null));
     }

@@ -30,7 +30,7 @@ public class SalaryAdjustmentController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<BaseResponse<SalaryAdjustment>> getById(@PathVariable Long id) {
+    public ResponseEntity<BaseResponse<SalaryAdjustment>> getById(@PathVariable java.util.UUID id) {
         return ResponseEntity.ok(BaseResponse.ok(service.findById(id)));
     }
 
@@ -40,12 +40,12 @@ public class SalaryAdjustmentController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<BaseResponse<SalaryAdjustment>> update(@PathVariable Long id, @Valid @RequestBody SalaryAdjustment payload) {
+    public ResponseEntity<BaseResponse<SalaryAdjustment>> update(@PathVariable java.util.UUID id, @Valid @RequestBody SalaryAdjustment payload) {
         return ResponseEntity.ok(BaseResponse.ok(service.update(id, payload)));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<BaseResponse<Void>> delete(@PathVariable Long id) {
+    public ResponseEntity<BaseResponse<Void>> delete(@PathVariable java.util.UUID id) {
         service.delete(id);
         return ResponseEntity.ok(BaseResponse.ok(null));
     }

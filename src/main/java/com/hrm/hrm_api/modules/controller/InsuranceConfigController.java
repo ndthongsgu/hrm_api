@@ -30,7 +30,7 @@ public class InsuranceConfigController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<BaseResponse<InsuranceConfig>> getById(@PathVariable Long id) {
+    public ResponseEntity<BaseResponse<InsuranceConfig>> getById(@PathVariable java.util.UUID id) {
         return ResponseEntity.ok(BaseResponse.ok(service.findById(id)));
     }
 
@@ -40,12 +40,12 @@ public class InsuranceConfigController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<BaseResponse<InsuranceConfig>> update(@PathVariable Long id, @Valid @RequestBody InsuranceConfig payload) {
+    public ResponseEntity<BaseResponse<InsuranceConfig>> update(@PathVariable java.util.UUID id, @Valid @RequestBody InsuranceConfig payload) {
         return ResponseEntity.ok(BaseResponse.ok(service.update(id, payload)));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<BaseResponse<Void>> delete(@PathVariable Long id) {
+    public ResponseEntity<BaseResponse<Void>> delete(@PathVariable java.util.UUID id) {
         service.delete(id);
         return ResponseEntity.ok(BaseResponse.ok(null));
     }

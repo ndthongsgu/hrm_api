@@ -33,6 +33,6 @@ public class AuthController {
         com.hrm.hrm_api.common.security.UserDetailsImpl userDetails = (com.hrm.hrm_api.common.security.UserDetailsImpl) authentication.getPrincipal();
         java.util.List<String> roles = userDetails.getAuthorities().stream().map(a -> a.getAuthority()).toList();
 
-        return ResponseEntity.ok(new JwtResponse(jwt, userDetails.getId(), userDetails.getUsername(), userDetails.getEmail(), roles));
+        return ResponseEntity.ok(new JwtResponse(jwt, userDetails.getId().toString(), userDetails.getUsername(), userDetails.getEmail(), roles));
     }
 }

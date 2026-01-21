@@ -14,10 +14,8 @@ import java.time.LocalDateTime;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class Payslip {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+public class Payslip extends BaseEntity {
+    // Inherit id, timestamps and audit fields from BaseEntity
 
     @ManyToOne
     @JoinColumn(name = "payroll_period_id")

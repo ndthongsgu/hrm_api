@@ -30,7 +30,7 @@ public class PayrollPeriodController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<BaseResponse<PayrollPeriod>> getById(@PathVariable Long id) {
+    public ResponseEntity<BaseResponse<PayrollPeriod>> getById(@PathVariable java.util.UUID id) {
         return ResponseEntity.ok(BaseResponse.ok(service.findById(id)));
     }
 
@@ -40,12 +40,12 @@ public class PayrollPeriodController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<BaseResponse<PayrollPeriod>> update(@PathVariable Long id, @Valid @RequestBody PayrollPeriod payload) {
+    public ResponseEntity<BaseResponse<PayrollPeriod>> update(@PathVariable java.util.UUID id, @Valid @RequestBody PayrollPeriod payload) {
         return ResponseEntity.ok(BaseResponse.ok(service.update(id, payload)));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<BaseResponse<Void>> delete(@PathVariable Long id) {
+    public ResponseEntity<BaseResponse<Void>> delete(@PathVariable java.util.UUID id) {
         service.delete(id);
         return ResponseEntity.ok(BaseResponse.ok(null));
     }

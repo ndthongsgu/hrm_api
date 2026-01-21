@@ -12,10 +12,8 @@ import java.time.LocalTime;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class WorkShift {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+public class WorkShift extends BaseEntity {
+    // Inherit id, timestamps and audit fields from BaseEntity
 
     private String name;
 

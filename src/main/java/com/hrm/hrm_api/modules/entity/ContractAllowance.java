@@ -12,10 +12,8 @@ import java.math.BigDecimal;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class ContractAllowance {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+public class ContractAllowance extends BaseEntity {
+    // Inherit id, timestamps and audit fields from BaseEntity
 
     @ManyToOne
     @JoinColumn(name = "contract_id")

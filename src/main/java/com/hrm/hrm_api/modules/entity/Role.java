@@ -10,15 +10,13 @@ import lombok.AllArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class Role {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+public class Role extends BaseEntity {
+    // Inherit id, timestamps and audit fields from BaseEntity
 
     private String name;
     private String description;
 
     // JSON map: {"EMPLOYEE": ["READ","CREATE"], "PAYROLL": ["READ"]}
-    @Column(name = "permissions_json", columnDefinition = "jsonb")
+    @Column(name = "permissions_json", columnDefinition = "text")
     private String permissionsJson;
 } 

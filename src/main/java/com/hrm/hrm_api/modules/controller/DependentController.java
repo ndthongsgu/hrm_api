@@ -30,7 +30,7 @@ public class DependentController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<BaseResponse<Dependent>> getById(@PathVariable Long id) {
+    public ResponseEntity<BaseResponse<Dependent>> getById(@PathVariable java.util.UUID id) {
         return ResponseEntity.ok(BaseResponse.ok(dependentService.findById(id)));
     }
 
@@ -40,12 +40,12 @@ public class DependentController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<BaseResponse<Dependent>> update(@PathVariable Long id, @Valid @RequestBody Dependent payload) {
+    public ResponseEntity<BaseResponse<Dependent>> update(@PathVariable java.util.UUID id, @Valid @RequestBody Dependent payload) {
         return ResponseEntity.ok(BaseResponse.ok(dependentService.update(id, payload)));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<BaseResponse<Void>> delete(@PathVariable Long id) {
+    public ResponseEntity<BaseResponse<Void>> delete(@PathVariable java.util.UUID id) {
         dependentService.delete(id);
         return ResponseEntity.ok(BaseResponse.ok(null));
     }

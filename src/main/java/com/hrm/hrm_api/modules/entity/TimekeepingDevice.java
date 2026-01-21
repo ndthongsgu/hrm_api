@@ -13,10 +13,8 @@ import java.time.LocalDateTime;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class TimekeepingDevice {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+public class TimekeepingDevice extends BaseEntity {
+    // Inherit id, timestamps and audit fields from BaseEntity
 
     private String deviceName;
 

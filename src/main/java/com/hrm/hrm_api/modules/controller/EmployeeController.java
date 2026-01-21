@@ -9,8 +9,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-
+import org.springframework.web.bind.annotation.*;import java.util.UUID;
 import jakarta.validation.Valid;
 
 @RestController
@@ -30,7 +29,7 @@ public class EmployeeController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<BaseResponse<Employee>> getById(@PathVariable Long id) {
+    public ResponseEntity<BaseResponse<Employee>> getById(@PathVariable java.util.UUID id) {
         return ResponseEntity.ok(BaseResponse.ok(employeeService.findById(id)));
     }
 
@@ -40,12 +39,12 @@ public class EmployeeController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<BaseResponse<Employee>> update(@PathVariable Long id, @Valid @RequestBody Employee payload) {
+    public ResponseEntity<BaseResponse<Employee>> update(@PathVariable java.util.UUID id, @Valid @RequestBody Employee payload) {
         return ResponseEntity.ok(BaseResponse.ok(employeeService.update(id, payload)));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<BaseResponse<Void>> delete(@PathVariable Long id) {
+    public ResponseEntity<BaseResponse<Void>> delete(@PathVariable java.util.UUID id) {
         employeeService.delete(id);
         return ResponseEntity.ok(BaseResponse.ok(null));
     }

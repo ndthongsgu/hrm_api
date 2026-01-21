@@ -14,7 +14,7 @@ import java.util.stream.Collectors;
 public class UserDetailsImpl implements UserDetails {
     private static final long serialVersionUID = 1L;
 
-    private Long id;
+    private java.util.UUID id;
 
     private String username;
 
@@ -24,14 +24,16 @@ public class UserDetailsImpl implements UserDetails {
     private String password;
 
     private Collection<? extends GrantedAuthority> authorities;
+    private boolean isAdmin = false;
 
-    public UserDetailsImpl(Long id, String username, String email, String password,
-                           Collection<? extends GrantedAuthority> authorities) {
+    public UserDetailsImpl(java.util.UUID id, String username, String email, String password,
+                           Collection<? extends GrantedAuthority> authorities, boolean isAdmin) {
         this.id = id;
         this.username = username;
         this.email = email;
         this.password = password;
         this.authorities = authorities;
+        this.isAdmin = isAdmin;
     }
 
     public static UserDetailsImpl build(Employee employee) {
@@ -69,7 +71,8 @@ public class UserDetailsImpl implements UserDetails {
                 user.getUsername(),
                 user.getUsername(),
                 user.getPassword(),
-                authorities);
+                authorities,
+                Boolean.TRUE.equals(user.getIsAdmin()));
     }
 
     @Override
@@ -77,12 +80,16 @@ public class UserDetailsImpl implements UserDetails {
         return authorities;
     }
 
-    public Long getId() {
+    public java.util.UUID getId() {
         return id;
     }
 
     public String getEmail() {
         return email;
+    }
+
+    public boolean isAdmin() {
+        return isAdmin;
     }
 
     @Override

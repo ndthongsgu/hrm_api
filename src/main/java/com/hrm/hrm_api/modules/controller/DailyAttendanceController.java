@@ -30,7 +30,7 @@ public class DailyAttendanceController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<BaseResponse<DailyAttendance>> getById(@PathVariable Long id) {
+    public ResponseEntity<BaseResponse<DailyAttendance>> getById(@PathVariable java.util.UUID id) {
         return ResponseEntity.ok(BaseResponse.ok(service.findById(id)));
     }
 
@@ -40,12 +40,12 @@ public class DailyAttendanceController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<BaseResponse<DailyAttendance>> update(@PathVariable Long id, @Valid @RequestBody DailyAttendance payload) {
+    public ResponseEntity<BaseResponse<DailyAttendance>> update(@PathVariable java.util.UUID id, @Valid @RequestBody DailyAttendance payload) {
         return ResponseEntity.ok(BaseResponse.ok(service.update(id, payload)));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<BaseResponse<Void>> delete(@PathVariable Long id) {
+    public ResponseEntity<BaseResponse<Void>> delete(@PathVariable java.util.UUID id) {
         service.delete(id);
         return ResponseEntity.ok(BaseResponse.ok(null));
     }

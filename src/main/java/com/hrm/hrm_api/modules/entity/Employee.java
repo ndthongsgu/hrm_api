@@ -4,9 +4,7 @@ import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
-import org.hibernate.annotations.CreationTimestamp;
 
-import java.time.LocalDateTime;
 import java.util.List;
 
 @Entity
@@ -14,10 +12,8 @@ import java.util.List;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class Employee {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+public class Employee extends BaseEntity {
+    // Inherit id, timestamps and audit fields from BaseEntity
 
     @Column(name = "full_name")
     private String fullName;
@@ -46,9 +42,6 @@ public class Employee {
     private String bankName;
 
     private String status; // ACTIVE, RESIGNED
-
-    @CreationTimestamp
-    private LocalDateTime createdAt;
 
     @OneToMany(mappedBy = "employee", cascade = CascadeType.ALL)
     private List<Dependent> dependents;

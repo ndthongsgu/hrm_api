@@ -28,7 +28,7 @@ public class UserServiceImpl extends AbstractCrudService<User> implements UserSe
 
     @Override
     @Transactional
-    public User update(Long id, User entity) {
+    public User update(java.util.UUID id, User entity) {
         if (entity.getPassword() != null && !entity.getPassword().isEmpty()) {
             entity.setPassword(passwordEncoder.encode(entity.getPassword()));
         } else {

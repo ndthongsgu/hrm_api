@@ -15,10 +15,8 @@ import java.time.LocalDateTime;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class SysSetting {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+public class SysSetting extends BaseEntity {
+    // Inherit id, timestamps and audit fields from BaseEntity
 
     @Column(name = "key_name", unique = true, nullable = false)
     private String key;

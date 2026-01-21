@@ -22,6 +22,12 @@ public class PermissionAspect {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication != null && authentication.getPrincipal() instanceof UserDetailsImpl) {
             UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
+
+            // If user is admin, bypass permission checks
+            if (userDetails.isAdmin()) {
+                return;
+            }
+
             String requiredAuthority = module + "_" + action.getCode();
 
             boolean hasPermission = userDetails.getAuthorities().stream()
