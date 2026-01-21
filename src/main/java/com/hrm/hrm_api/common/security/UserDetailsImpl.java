@@ -35,16 +35,40 @@ public class UserDetailsImpl implements UserDetails {
     }
 
     public static UserDetailsImpl build(Employee employee) {
-        List<GrantedAuthority> authorities = employee.getRoles().stream()
-                .flatMap(role -> role.getPermissions().stream())
-                .map(permission -> new SimpleGrantedAuthority(permission.getModule() + "_" + permission.getAction()))
+        throw new UnsupportedOperationException("Authentication via Employee entity is not supported. Use User entity instead.");
+    }
+
+    private static java.util.List<String> parsePermissionsJson(String json) {
+        if (json == null || json.isEmpty()) return java.util.Collections.emptyList();
+        try {
+            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            java.util.Map<String, java.util.List<String>> map = mapper.readValue(json, java.util.Map.class);
+            java.util.List<String> result = new java.util.ArrayList<>();
+            for (java.util.Map.Entry<String, java.util.List<String>> e : map.entrySet()) {
+                String module = e.getKey();
+                for (Object actionObj : e.getValue()) {
+                    String action = String.valueOf(actionObj);
+                    result.add(module + "_" + action);
+                }
+            }
+            return result;
+        } catch (Exception ex) {
+            return java.util.Collections.emptyList();
+        }
+    }
+
+    public static UserDetailsImpl buildFromUser(com.hrm.hrm_api.modules.entity.User user) {
+        java.util.List<GrantedAuthority> authorities = user.getRoles() == null ? java.util.Collections.emptyList()
+                : user.getRoles().stream()
+                .flatMap(role -> parsePermissionsJson(role.getPermissionsJson()).stream())
+                .map(perm -> new SimpleGrantedAuthority(perm))
                 .collect(Collectors.toList());
 
         return new UserDetailsImpl(
-                employee.getId(),
-                employee.getEmail(),
-                employee.getEmail(),
-                employee.getPassword(),
+                user.getId(),
+                user.getUsername(),
+                user.getUsername(),
+                user.getPassword(),
                 authorities);
     }
 

@@ -1,42 +1,52 @@
 package com.hrm.hrm_api.modules.controller;
 
+import com.hrm.hrm_api.modules.dto.base.BaseResponse;
+import com.hrm.hrm_api.modules.dto.base.PageResponse;
 import com.hrm.hrm_api.modules.entity.Role;
-import com.hrm.hrm_api.modules.service.RoleService;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.hrm.hrm_api.modules.service.role.RoleService;
+import com.hrm.hrm_api.modules.util.PaginationUtils;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/roles")
 public class RoleController {
 
-    @Autowired
-    private RoleService roleService;
+    private final RoleService service;
+
+    public RoleController(RoleService service) {
+        this.service = service;
+    }
 
     @GetMapping
-    public List<Role> getAllRoles() {
-        return roleService.getAllRoles();
+    public ResponseEntity<BaseResponse<PageResponse<Role>>> list(@PageableDefault(size = 20) Pageable pageable) {
+        Page<Role> page = service.findAll(pageable);
+        return ResponseEntity.ok(BaseResponse.ok(PaginationUtils.toPageResponse(page)));
     }
 
     @GetMapping("/{id}")
-    public Role getRoleById(@PathVariable Long id) {
-        return roleService.getRoleById(id).orElse(null);
+    public ResponseEntity<BaseResponse<Role>> getById(@PathVariable Long id) {
+        return ResponseEntity.ok(BaseResponse.ok(service.findById(id)));
     }
 
     @PostMapping
-    public Role createRole(@RequestBody Role role) {
-        return roleService.saveRole(role);
+    public ResponseEntity<BaseResponse<Role>> create(@Valid @RequestBody Role payload) {
+        return ResponseEntity.ok(BaseResponse.ok(service.create(payload)));
     }
 
     @PutMapping("/{id}")
-    public Role updateRole(@PathVariable Long id, @RequestBody Role role) {
-        role.setId(id);
-        return roleService.saveRole(role);
+    public ResponseEntity<BaseResponse<Role>> update(@PathVariable Long id, @Valid @RequestBody Role payload) {
+        return ResponseEntity.ok(BaseResponse.ok(service.update(id, payload)));
     }
 
     @DeleteMapping("/{id}")
-    public void deleteRole(@PathVariable Long id) {
-        roleService.deleteRole(id);
+    public ResponseEntity<BaseResponse<Void>> delete(@PathVariable Long id) {
+        service.delete(id);
+        return ResponseEntity.ok(BaseResponse.ok(null));
     }
 }

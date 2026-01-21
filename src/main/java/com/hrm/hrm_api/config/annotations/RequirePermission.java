@@ -1,6 +1,6 @@
 package com.hrm.hrm_api.config.annotations;
 
-import com.hrm.hrm_api.common.constants.PermissionAction;
+import com.hrm.hrm_api.common.constants.PermissionDefinition;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -21,6 +21,6 @@ public @interface RequirePermission {
     /**
      * Required action (READ, CREATE, UPDATE, DELETE, etc.)
      */
-    PermissionAction action();
+    PermissionDefinition action();
 }
 

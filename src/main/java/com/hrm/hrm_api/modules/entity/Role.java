@@ -2,12 +2,14 @@ package com.hrm.hrm_api.modules.entity;
 
 import jakarta.persistence.*;
 import lombok.Data;
-
-import java.util.Set;
+import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
 
 @Entity
 @Table(name = "roles")
 @Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class Role {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -16,9 +18,7 @@ public class Role {
     private String name;
     private String description;
 
-    @ManyToMany(fetch = FetchType.LAZY)
-    @JoinTable(name = "role_permissions",
-            joinColumns = @JoinColumn(name = "role_id"),
-            inverseJoinColumns = @JoinColumn(name = "permission_id"))
-    private Set<Permission> permissions;
-}
+    // JSON map: {"EMPLOYEE": ["READ","CREATE"], "PAYROLL": ["READ"]}
+    @Column(name = "permissions_json", columnDefinition = "jsonb")
+    private String permissionsJson;
+} 

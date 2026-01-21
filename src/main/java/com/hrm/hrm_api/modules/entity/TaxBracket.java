@@ -1,0 +1,34 @@
+package com.hrm.hrm_api.modules.entity;
+
+import jakarta.persistence.*;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
+
+import java.math.BigDecimal;
+
+@Entity
+@Table(name = "tax_brackets")
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class TaxBracket {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    private String policyName;
+
+    @Column(precision = 15, scale = 2)
+    private BigDecimal minIncome;
+
+    @Column(precision = 15, scale = 2)
+    private BigDecimal maxIncome;
+
+    private Double taxRate;
+
+    @Column(precision = 15, scale = 2)
+    private BigDecimal subtractAmount;
+
+    private Boolean isActive = true;
+}

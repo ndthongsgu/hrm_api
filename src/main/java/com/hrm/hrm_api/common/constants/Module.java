@@ -26,14 +26,9 @@ public class Module {
 
     public List<ModuleDto> getModuleList() {
         List<ModuleDto> result = new ArrayList<>();
-        result.add(create("EMPLOYEE", "Quản lý nhân viên", "Quản lý thông tin nhân viên", "/employee"));
-        result.add(create("CONTRACT", "Quản lý hợp đồng", "Quản lý hợp đồng lao động", "/contract"));
-        result.add(create("SALARY", "Quản lý lương", "Quản lý cấu trúc lương", "/salary"));
-        result.add(create("ATTENDANCE", "Quản lý chấm công", "Quản lý điểm danh và chấm công", "/attendance"));
-        result.add(create("PAYROLL", "Quản lý bảng lương", "Quản lý tính lương và phiếu lương", "/payroll"));
-        result.add(create("ROLE", "Quản lý vai trò", "Quản lý vai trò trong hệ thống", "/role"));
-        result.add(create("PERMISSION", "Phân quyền", "Quản lý quyền hạn", "/permission"));
-
+        for (com.hrm.hrm_api.common.constants.ModuleDefinition def : com.hrm.hrm_api.common.constants.ModuleDefinition.values()) {
+            result.add(create(def.getCode(), def.getName(), def.getDescription(), def.getUrl()));
+        }
         return result;
     }
 
