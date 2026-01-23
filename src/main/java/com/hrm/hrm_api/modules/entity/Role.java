@@ -13,6 +13,7 @@ import java.util.HashSet;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@lombok.EqualsAndHashCode(callSuper = false, exclude = {"userRoles"})
 public class Role extends BaseEntity {
     // Inherit id, timestamps and audit fields from BaseEntity
 

@@ -14,6 +14,7 @@ import java.util.stream.Collectors;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@lombok.EqualsAndHashCode(callSuper = false, exclude = {"userRoles", "employee"})
 public class User extends BaseEntity {
     // Inherit id, timestamps and audit fields from BaseEntity
 

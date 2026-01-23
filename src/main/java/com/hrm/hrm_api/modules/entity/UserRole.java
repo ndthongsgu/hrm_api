@@ -10,6 +10,7 @@ import lombok.Data;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@lombok.EqualsAndHashCode(callSuper = false, exclude = {"user", "role"})
 public class UserRole extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)

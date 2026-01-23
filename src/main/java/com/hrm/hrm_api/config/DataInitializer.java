@@ -14,7 +14,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 import java.util.Optional;
-import java.util.Set;
 
 @Component
 @Profile("!test")
@@ -68,15 +67,27 @@ public class DataInitializer implements CommandLineRunner {
             roleRepository.save(adminRole);
         }
 
-        // Create default admin user (use isAdmin flag instead of roles)
+        // Create default admin user and assign ADMIN role
         if (userRepository.findByUsername("admin").isEmpty()) {
             User u = new User();
             u.setUsername("admin");
             u.setPassword(passwordEncoder.encode("admin"));
             u.setActive(true);
             u.setIsAdmin(true);
-            // No roles required for admin
+            
+            // Assign ADMIN role to admin user (creates user_roles entry)
+            u.addRole(adminRole);
+            
             userRepository.save(u);
+        } else {
+            // If admin user exists, ensure it has ADMIN role
+            User existingAdmin = userRepository.findByUsername("admin").get();
+            boolean hasAdminRole = existingAdmin.getRoles().stream()
+                    .anyMatch(r -> "ADMIN".equals(r.getName()));
+            if (!hasAdminRole) {
+                existingAdmin.addRole(adminRole);
+                userRepository.save(existingAdmin);
+            }
         }
     }
 } 
