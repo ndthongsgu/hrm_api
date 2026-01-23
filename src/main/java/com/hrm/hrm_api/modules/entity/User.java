@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
+import lombok.ToString;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 
 import java.util.Set;
 import java.util.HashSet;
@@ -14,6 +16,7 @@ import java.util.stream.Collectors;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@ToString(exclude = "userRoles")
 @lombok.EqualsAndHashCode(callSuper = false, exclude = {"userRoles", "employee"})
 public class User extends BaseEntity {
     // Inherit id, timestamps and audit fields from BaseEntity
@@ -32,6 +35,7 @@ public class User extends BaseEntity {
     private Employee employee; // optional link to employee
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @JsonManagedReference
     private Set<UserRole> userRoles = new HashSet<>();
 
     public void addRole(Role role) {

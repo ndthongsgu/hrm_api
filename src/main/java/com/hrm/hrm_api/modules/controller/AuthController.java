@@ -50,10 +50,24 @@ public class AuthController {
         String jwt = jwtUtils.generateJwtToken(authentication);
         String refreshToken = jwtUtils.generateRefreshToken(authentication);
 
-        com.hrm.hrm_api.common.security.UserDetailsImpl userDetails = (com.hrm.hrm_api.common.security.UserDetailsImpl) authentication.getPrincipal();
-        java.util.List<String> roles = userDetails.getAuthorities().stream().map(a -> a.getAuthority()).toList();
+        UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
+        
+        // Get role names (e.g., "ADMIN", "USER") from User entity, not permissions
+        Optional<User> userOpt = userRepository.findById(userDetails.getId());
+        java.util.List<String> roleNames = new ArrayList<>();
+        Boolean isAdmin = false;
+        if (userOpt.isPresent()) {
+            User user = userOpt.get();
+            isAdmin = Boolean.TRUE.equals(user.getIsAdmin());
+            if (user.getRoles() != null) {
+                roleNames = user.getRoles().stream()
+                        .map(Role::getName)
+                        .filter(name -> name != null && !name.isEmpty())
+                        .collect(java.util.stream.Collectors.toList());
+            }
+        }
 
-        return ResponseEntity.ok(new JwtResponse(jwt, refreshToken, userDetails.getId().toString(), userDetails.getUsername(), userDetails.getEmail(), roles));
+        return ResponseEntity.ok(new JwtResponse(jwt, refreshToken, userDetails.getId().toString(), userDetails.getUsername(), userDetails.getEmail(), roleNames, isAdmin));
     }
 
     @PostMapping("/refresh")
@@ -90,9 +104,20 @@ public class AuthController {
             // Generate new refresh token (rotate refresh token for security)
             String newRefreshToken = jwtUtils.generateRefreshToken(authentication);
 
-            // Get roles
-            java.util.List<String> roles = userDetailsImpl.getAuthorities().stream()
-                    .map(a -> a.getAuthority()).toList();
+            // Get role names (e.g., "ADMIN", "USER") from User entity, not permissions
+            Optional<User> userOpt = userRepository.findById(userDetailsImpl.getId());
+            java.util.List<String> roleNames = new ArrayList<>();
+            Boolean isAdmin = false;
+            if (userOpt.isPresent()) {
+                User user = userOpt.get();
+                isAdmin = Boolean.TRUE.equals(user.getIsAdmin());
+                if (user.getRoles() != null) {
+                    roleNames = user.getRoles().stream()
+                            .map(Role::getName)
+                            .filter(name -> name != null && !name.isEmpty())
+                            .collect(java.util.stream.Collectors.toList());
+                }
+            }
 
             return ResponseEntity.ok(new JwtResponse(
                     newAccessToken,
@@ -100,7 +125,8 @@ public class AuthController {
                     userDetailsImpl.getId().toString(),
                     username,
                     userDetailsImpl.getEmail(),
-                    roles
+                    roleNames,
+                    isAdmin
             ));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
