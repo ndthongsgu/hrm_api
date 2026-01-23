@@ -1,4 +1,4 @@
-package com.hrm.hrm_api.modules.request;
+package com.hrm.hrm_api.modules.dto.request;
 
 import lombok.Data;
 

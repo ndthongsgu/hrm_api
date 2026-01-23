@@ -2,7 +2,7 @@ package com.hrm.hrm_api.modules.controller;
 
 import com.hrm.hrm_api.common.response.JwtResponse;
 import com.hrm.hrm_api.common.util.JwtUtils;
-import com.hrm.hrm_api.modules.request.LoginRequest;
+import com.hrm.hrm_api.modules.dto.request.LoginRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
