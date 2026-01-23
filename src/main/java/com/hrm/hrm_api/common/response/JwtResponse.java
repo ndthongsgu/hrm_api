@@ -3,15 +3,27 @@ package com.hrm.hrm_api.common.response;
 import java.util.List;
 
 public class JwtResponse {
-    private String token;
+    private String accessToken;
+    private String refreshToken;
     private String type = "Bearer";
     private String id;
     private String username;
     private String email;
     private List<String> roles;
 
+    public JwtResponse(String accessToken, String refreshToken, String id, String username, String email, List<String> roles) {
+        this.accessToken = accessToken;
+        this.refreshToken = refreshToken;
+        this.id = id;
+        this.username = username;
+        this.email = email;
+        this.roles = roles;
+    }
+
+    // Constructor without refreshToken for backward compatibility
     public JwtResponse(String accessToken, String id, String username, String email, List<String> roles) {
-        this.token = accessToken;
+        this.accessToken = accessToken;
+        this.refreshToken = null;
         this.id = id;
         this.username = username;
         this.email = email;
@@ -19,11 +31,11 @@ public class JwtResponse {
     }
 
     public String getAccessToken() {
-        return token;
+        return accessToken;
     }
 
     public void setAccessToken(String accessToken) {
-        this.token = accessToken;
+        this.accessToken = accessToken;
     }
 
     public String getTokenType() {
@@ -60,5 +72,13 @@ public class JwtResponse {
 
     public List<String> getRoles() {
         return roles;
+    }
+
+    public String getRefreshToken() {
+        return refreshToken;
+    }
+
+    public void setRefreshToken(String refreshToken) {
+        this.refreshToken = refreshToken;
     }
 }
