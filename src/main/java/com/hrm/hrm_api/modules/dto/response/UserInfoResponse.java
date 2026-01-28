@@ -1,5 +1,6 @@
 package com.hrm.hrm_api.modules.dto.response;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.Map;
 import java.util.List;
 
@@ -58,6 +59,7 @@ public class UserInfoResponse {
         this.name = name;
     }
 
+    @JsonProperty("isAdmin")
     public boolean isAdmin() {
         return isAdmin;
     }
@@ -66,6 +68,7 @@ public class UserInfoResponse {
         isAdmin = admin;
     }
 
+    @JsonProperty("isGoogle")
     public boolean isGoogle() {
         return isGoogle;
     }

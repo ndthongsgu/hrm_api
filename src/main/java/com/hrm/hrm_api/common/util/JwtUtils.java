@@ -5,6 +5,10 @@ import io.jsonwebtoken.*;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
+
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Component;
 
@@ -34,7 +38,26 @@ public class JwtUtils {
     }
 
     private Key key() {
-        return Keys.hmacShaKeyFor(Decoders.BASE64.decode(jwtSecret));
+        byte[] keyBytes;
+        // Try decoding as Base64 first
+        try {
+            keyBytes = Decoders.BASE64.decode(jwtSecret);
+        } catch (IllegalArgumentException e) {
+            // Not valid Base64, fallback to raw UTF-8 bytes
+            keyBytes = jwtSecret.getBytes(StandardCharsets.UTF_8);
+        }
+
+        // If key material is too short (< 256 bits), derive a 256-bit key using SHA-256 of the secret
+        if (keyBytes.length < 32) {
+            try {
+                MessageDigest sha = MessageDigest.getInstance("SHA-256");
+                keyBytes = sha.digest(jwtSecret.getBytes(StandardCharsets.UTF_8));
+            } catch (NoSuchAlgorithmException e) {
+                throw new IllegalStateException("SHA-256 MessageDigest not available", e);
+            }
+        }
+
+        return Keys.hmacShaKeyFor(keyBytes);
     }
 
     public String getUserNameFromJwtToken(String token) {
