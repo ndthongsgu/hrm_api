@@ -4,8 +4,8 @@ spring:
   datasource:
     # Connect to PostgreSQL running via docker-compose on localhost
     url: jdbc:postgresql://localhost:5432/hrm_db
-    username: hrm_user
-    password: change_me
+    username: postgres
+    password: admin123
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
@@ -17,5 +17,5 @@ spring:
 
 hrm:
   app:
-    jwtSecret: mySecretKey
+    jwtSecret: vP2r7b9bEw3xH1v7m0y2sQ8fQfL8nXGk5ZtK2mYyZ3s=
     jwtExpirationMs: 86400000

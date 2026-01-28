@@ -1,13 +1,27 @@
 version: '3.8'
 
 services:
+  api:
+    build: .
+    container_name: hrm-api
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/hrm_db
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: admin123
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
   db:
     image: postgres:15
     container_name: hrm-postgres
     environment:
       POSTGRES_DB: hrm_db
-      POSTGRES_USER: hrm_user
-      POSTGRES_PASSWORD: change_me
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: admin123
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./docker/db/init:/docker-entrypoint-initdb.d:ro
@@ -15,7 +29,7 @@ services:
       - "5432:5432"
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U hrm_user -d hrm_db"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d hrm_db"]
       interval: 10s
       timeout: 5s
       retries: 5
