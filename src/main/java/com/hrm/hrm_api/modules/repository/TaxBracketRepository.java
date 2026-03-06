@@ -2,6 +2,8 @@ package com.hrm.hrm_api.modules.repository;
 
 import com.hrm.hrm_api.modules.entity.TaxBracket;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -11,4 +13,7 @@ public interface TaxBracketRepository extends JpaRepository<TaxBracket, UUID> {
 	List<TaxBracket> findByIsActiveTrueOrderByMinIncomeAsc();
 
 	List<TaxBracket> findByIsActiveTrueAndEffectiveDateLessThanEqualOrderByMinIncomeAsc(LocalDate effectiveDate);
+    
+    @Query("SELECT tb FROM TaxBracket tb WHERE tb.isActive = :isActive ORDER BY tb.minIncome ASC")
+    List<TaxBracket> findByIsActive(@Param("isActive") Boolean isActive);
 }

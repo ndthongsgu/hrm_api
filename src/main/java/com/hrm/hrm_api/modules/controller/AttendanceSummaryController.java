@@ -12,6 +12,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/attendance-summaries")
@@ -30,7 +31,7 @@ public class AttendanceSummaryController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<BaseResponse<AttendanceSummary>> getById(@PathVariable java.util.UUID id) {
+    public ResponseEntity<BaseResponse<AttendanceSummary>> getById(@PathVariable UUID id) {
         return ResponseEntity.ok(BaseResponse.ok(service.findById(id)));
     }
 
@@ -40,13 +41,22 @@ public class AttendanceSummaryController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<BaseResponse<AttendanceSummary>> update(@PathVariable java.util.UUID id, @Valid @RequestBody AttendanceSummary payload) {
+    public ResponseEntity<BaseResponse<AttendanceSummary>> update(@PathVariable UUID id, @Valid @RequestBody AttendanceSummary payload) {
         return ResponseEntity.ok(BaseResponse.ok(service.update(id, payload)));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<BaseResponse<Void>> delete(@PathVariable java.util.UUID id) {
+    public ResponseEntity<BaseResponse<Void>> delete(@PathVariable UUID id) {
         service.delete(id);
         return ResponseEntity.ok(BaseResponse.ok(null));
+    }
+
+    /**
+     * Bước 2: Duyệt công - đóng băng công cho kỳ
+     */
+    @PostMapping("/{id}/approve")
+    public ResponseEntity<BaseResponse<String>> approveAttendance(@PathVariable UUID id) {
+        service.approveAttendance(id);
+        return ResponseEntity.ok(BaseResponse.ok("Duyệt công thành công"));
     }
 }

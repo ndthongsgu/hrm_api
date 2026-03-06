@@ -2,6 +2,7 @@ package com.hrm.hrm_api.modules.controller;
 
 import com.hrm.hrm_api.modules.dto.base.BaseResponse;
 import com.hrm.hrm_api.modules.dto.base.PageResponse;
+import com.hrm.hrm_api.modules.dto.request.DepartmentSearchRequest;
 import com.hrm.hrm_api.modules.entity.Department;
 import com.hrm.hrm_api.modules.service.department.DepartmentService;
 import com.hrm.hrm_api.modules.util.PaginationUtils;
@@ -23,9 +24,19 @@ public class DepartmentController {
         this.departmentService = departmentService;
     }
 
-    @GetMapping
-    public ResponseEntity<BaseResponse<PageResponse<Department>>> list(@PageableDefault(size = 20) Pageable pageable) {
-        Page<Department> page = departmentService.findAll(pageable);
+    @PostMapping
+    public ResponseEntity<BaseResponse<PageResponse<Department>>> search(
+            @RequestBody(required = false) DepartmentSearchRequest request) {
+        if (request == null) {
+            request = new DepartmentSearchRequest();
+        }
+        Page<Department> page = departmentService.findByFilters(
+                org.springframework.data.domain.PageRequest.of(
+                        request.getSkip() / request.getTake(),
+                        request.getTake()
+                ),
+                request.getWhere()
+        );
         return ResponseEntity.ok(BaseResponse.ok(PaginationUtils.toPageResponse(page)));
     }
 
@@ -34,7 +45,7 @@ public class DepartmentController {
         return ResponseEntity.ok(BaseResponse.ok(departmentService.findById(id)));
     }
 
-    @PostMapping
+    @PostMapping("/create")
     public ResponseEntity<BaseResponse<Department>> create(@Valid @RequestBody Department payload) {
         return ResponseEntity.ok(BaseResponse.ok(departmentService.create(payload)));
     }
