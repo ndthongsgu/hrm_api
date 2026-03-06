@@ -2,8 +2,17 @@ package com.hrm.hrm_api.modules.repository;
 
 import com.hrm.hrm_api.modules.entity.AttendanceSummary;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
+import java.util.Optional;
 import java.util.UUID;
 
 public interface AttendanceSummaryRepository extends JpaRepository<AttendanceSummary, UUID> {
+    
+    @Query("SELECT a FROM AttendanceSummary a WHERE a.payrollPeriod.id = :payrollPeriodId AND a.employee.id = :employeeId")
+    Optional<AttendanceSummary> findByPayrollPeriodAndEmployee(
+        @Param("payrollPeriodId") UUID payrollPeriodId,
+        @Param("employeeId") UUID employeeId
+    );
 }

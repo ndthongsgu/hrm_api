@@ -1,13 +1,10 @@
 package com.hrm.hrm_api.modules.controller;
 
 import com.hrm.hrm_api.modules.dto.base.BaseResponse;
-import com.hrm.hrm_api.modules.dto.base.PageResponse;
+import com.hrm.hrm_api.modules.dto.base.PaginationResponse;
+import com.hrm.hrm_api.modules.dto.request.EmployeeSearchRequest;
 import com.hrm.hrm_api.modules.entity.Employee;
 import com.hrm.hrm_api.modules.service.employee.EmployeeService;
-import com.hrm.hrm_api.modules.util.PaginationUtils;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;import java.util.UUID;
 import jakarta.validation.Valid;
@@ -22,10 +19,10 @@ public class EmployeeController {
         this.employeeService = employeeService;
     }
 
-    @GetMapping
-    public ResponseEntity<BaseResponse<PageResponse<Employee>>> list(@PageableDefault(size = 20) Pageable pageable) {
-        Page<Employee> page = employeeService.findAll(pageable);
-        return ResponseEntity.ok(BaseResponse.ok(PaginationUtils.toPageResponse(page)));
+    @PostMapping
+    public ResponseEntity<BaseResponse<PaginationResponse<Employee>>> search(@RequestBody(required = false) EmployeeSearchRequest request) {
+        PaginationResponse<Employee> response = employeeService.search(request);
+        return ResponseEntity.ok(BaseResponse.ok(response));
     }
 
     @GetMapping("/{id}")
@@ -33,7 +30,7 @@ public class EmployeeController {
         return ResponseEntity.ok(BaseResponse.ok(employeeService.findById(id)));
     }
 
-    @PostMapping
+    @PostMapping("/create")
     public ResponseEntity<BaseResponse<Employee>> create(@Valid @RequestBody Employee payload) {
         return ResponseEntity.ok(BaseResponse.ok(employeeService.create(payload)));
     }

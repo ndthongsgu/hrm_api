@@ -25,4 +25,6 @@ public class AttendanceSummary extends BaseEntity {
     private Float paidLeaveDays;
     private Float unpaidLeaveDays;
     private Float overtimeHours;
+    
+    private Boolean isApproved = false;
 }

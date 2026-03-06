@@ -2,6 +2,7 @@ package com.hrm.hrm_api.modules.controller;
 
 import com.hrm.hrm_api.modules.dto.base.BaseResponse;
 import com.hrm.hrm_api.modules.dto.base.PageResponse;
+import com.hrm.hrm_api.modules.dto.request.RoleSearchRequest;
 import com.hrm.hrm_api.modules.entity.Role;
 import com.hrm.hrm_api.modules.service.role.RoleService;
 import com.hrm.hrm_api.modules.util.PaginationUtils;
@@ -24,9 +25,19 @@ public class RoleController {
         this.service = service;
     }
 
-    @GetMapping
-    public ResponseEntity<BaseResponse<PageResponse<Role>>> list(@PageableDefault(size = 20) Pageable pageable) {
-        Page<Role> page = service.findAll(pageable);
+    @PostMapping
+    public ResponseEntity<BaseResponse<PageResponse<Role>>> search(
+            @RequestBody(required = false) RoleSearchRequest request) {
+        if (request == null) {
+            request = new RoleSearchRequest();
+        }
+        Page<Role> page = service.findByFilters(
+                org.springframework.data.domain.PageRequest.of(
+                        request.getSkip() / request.getTake(),
+                        request.getTake()
+                ),
+                request.getWhere()
+        );
         return ResponseEntity.ok(BaseResponse.ok(PaginationUtils.toPageResponse(page)));
     }
 
@@ -35,7 +46,7 @@ public class RoleController {
         return ResponseEntity.ok(BaseResponse.ok(service.findById(id)));
     }
 
-    @PostMapping
+    @PostMapping("/create")
     public ResponseEntity<BaseResponse<Role>> create(@Valid @RequestBody Role payload) {
         return ResponseEntity.ok(BaseResponse.ok(service.create(payload)));
     }

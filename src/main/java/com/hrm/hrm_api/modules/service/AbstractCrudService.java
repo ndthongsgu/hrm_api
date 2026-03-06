@@ -37,17 +37,27 @@ public abstract class AbstractCrudService<T> implements CrudService<T> {
     @Override
     @Transactional
     public T update(UUID id, T entity) {
-        if (!repository.existsById(id)) {
-            throw new ResourceNotFoundException(entityClass, id);
-        }
+        T existing = repository.findById(id).orElseThrow(() -> new ResourceNotFoundException(entityClass, id));
+        // Copy properties from entity to existing, excluding id and version
         try {
-            java.lang.reflect.Field f = entity.getClass().getDeclaredField("id");
-            f.setAccessible(true);
-            f.set(entity, id);
-        } catch (NoSuchFieldException | IllegalAccessException ignored) {
-            // If no id field, proceed and let JPA handle
+            Class<?> clazz = entity.getClass();
+            while (clazz != null) {
+                java.lang.reflect.Field[] fields = clazz.getDeclaredFields();
+                for (java.lang.reflect.Field field : fields) {
+                    if (!"id".equals(field.getName()) && !"version".equals(field.getName()) && !"createdAt".equals(field.getName()) && !"createdBy".equals(field.getName())) {
+                        field.setAccessible(true);
+                        Object value = field.get(entity);
+                        if (value != null) {
+                            field.set(existing, value);
+                        }
+                    }
+                }
+                clazz = clazz.getSuperclass();
+            }
+        } catch (IllegalAccessException ignored) {
+            // If cannot copy, proceed
         }
-        return repository.save(entity);
+        return repository.save(existing);
     }
 
     @Override
