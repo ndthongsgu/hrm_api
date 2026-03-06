@@ -5,7 +5,9 @@ import com.hrm.hrm_api.modules.dto.base.ErrorResponse;
 import jakarta.validation.ConstraintViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.InsufficientAuthenticationException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
@@ -43,6 +45,16 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(AuthenticationException.class)
     public ResponseEntity<BaseResponse<Object>> handleAuthentication(AuthenticationException ex) {
         return new ResponseEntity<>(BaseResponse.error("Authentication failed: " + ex.getMessage()), HttpStatus.UNAUTHORIZED);
+    }
+
+    @ExceptionHandler(InsufficientAuthenticationException.class)
+    public ResponseEntity<BaseResponse<Object>> handleInsufficientAuthentication(InsufficientAuthenticationException ex) {
+        return new ResponseEntity<>(BaseResponse.error("User not authenticated"), HttpStatus.UNAUTHORIZED);
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<BaseResponse<Object>> handleAccessDenied(AccessDeniedException ex) {
+        return new ResponseEntity<>(BaseResponse.error("Access denied: " + ex.getMessage()), HttpStatus.FORBIDDEN);
     }
 
     @ExceptionHandler(Exception.class)
