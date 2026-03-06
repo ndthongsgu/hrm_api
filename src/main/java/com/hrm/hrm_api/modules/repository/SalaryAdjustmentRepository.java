@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.UUID;
 
 public interface SalaryAdjustmentRepository extends JpaRepository<SalaryAdjustment, UUID> {
+	List<SalaryAdjustment> findByPayrollPeriodIdAndEmployeeId(UUID payrollPeriodId, UUID employeeId);
     
     @Query("SELECT sa FROM SalaryAdjustment sa WHERE sa.employee.id = :employeeId AND sa.payrollPeriod.id = :payrollPeriodId")
     List<SalaryAdjustment> findByEmployeeAndPayrollPeriod(

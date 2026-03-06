@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.UUID;
 
 public interface DependentRepository extends JpaRepository<Dependent, UUID> {
+	long countByEmployeeIdAndIsQualifiedTrue(UUID employeeId);
     
     @Query("SELECT d FROM Dependent d WHERE d.employee.id = :employeeId AND d.isQualified = :isQualified")
     List<Dependent> findByEmployeeAndIsQualified(

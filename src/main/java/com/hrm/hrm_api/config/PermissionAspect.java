@@ -6,6 +6,8 @@ import com.hrm.hrm_api.common.constants.PermissionDefinition;
 import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Before;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authentication.InsufficientAuthenticationException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
@@ -34,10 +36,10 @@ public class PermissionAspect {
                     .anyMatch(grantedAuthority -> grantedAuthority.getAuthority().equals(requiredAuthority));
 
             if (!hasPermission) {
-                throw new RuntimeException("Access denied: Insufficient permissions for " + requiredAuthority);
+                throw new AccessDeniedException("Insufficient permissions for " + requiredAuthority);
             }
         } else {
-            throw new RuntimeException("User not authenticated");
+            throw new InsufficientAuthenticationException("User not authenticated");
         }
     }
 }

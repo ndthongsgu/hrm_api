@@ -6,6 +6,7 @@ import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 
 @Entity
 @Table(name = "insurance_configs")
@@ -17,7 +18,7 @@ public class InsuranceConfig extends BaseEntity {
 
     private String type; // SOCIAL, HEALTH, UNEMPLOYMENT
 
-    @Column(precision = 5, scale = 2)
+    @Column(precision = 10, scale = 0)
     private BigDecimal employeeRate;
 
     private Double companyRate;
@@ -25,4 +26,6 @@ public class InsuranceConfig extends BaseEntity {
     private String capBaseType; // BASE_SALARY or REGION_MIN
 
     private Integer capMultiplier; // e.g., 20
+
+    private LocalDate effectiveDate;
 }

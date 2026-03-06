@@ -1,5 +1,7 @@
 package com.hrm.hrm_api.modules.controller;
 
+import com.hrm.hrm_api.common.constants.PermissionDefinition;
+import com.hrm.hrm_api.config.annotations.RequirePermission;
 import com.hrm.hrm_api.modules.dto.base.BaseResponse;
 import com.hrm.hrm_api.modules.dto.base.PageResponse;
 import com.hrm.hrm_api.modules.dto.request.RoleSearchRequest;
@@ -25,6 +27,10 @@ public class RoleController {
         this.service = service;
     }
 
+    @GetMapping
+    @RequirePermission(module = "ROLE", action = PermissionDefinition.READ)
+    public ResponseEntity<BaseResponse<PageResponse<Role>>> list(@PageableDefault(size = 20) Pageable pageable) {
+        Page<Role> page = service.findAll(pageable);
     @PostMapping
     public ResponseEntity<BaseResponse<PageResponse<Role>>> search(
             @RequestBody(required = false) RoleSearchRequest request) {
@@ -42,21 +48,26 @@ public class RoleController {
     }
 
     @GetMapping("/{id}")
+    @RequirePermission(module = "ROLE", action = PermissionDefinition.READ)
     public ResponseEntity<BaseResponse<Role>> getById(@PathVariable UUID id) {
         return ResponseEntity.ok(BaseResponse.ok(service.findById(id)));
     }
 
+    @PostMapping
+    @RequirePermission(module = "ROLE", action = PermissionDefinition.CREATE)
     @PostMapping("/create")
     public ResponseEntity<BaseResponse<Role>> create(@Valid @RequestBody Role payload) {
         return ResponseEntity.ok(BaseResponse.ok(service.create(payload)));
     }
 
     @PutMapping("/{id}")
+    @RequirePermission(module = "ROLE", action = PermissionDefinition.UPDATE)
     public ResponseEntity<BaseResponse<Role>> update(@PathVariable UUID id, @Valid @RequestBody Role payload) {
         return ResponseEntity.ok(BaseResponse.ok(service.update(id, payload)));
     }
 
     @DeleteMapping("/{id}")
+    @RequirePermission(module = "ROLE", action = PermissionDefinition.DELETE)
     public ResponseEntity<BaseResponse<Void>> delete(@PathVariable UUID id) {
         service.delete(id);
         return ResponseEntity.ok(BaseResponse.ok(null));

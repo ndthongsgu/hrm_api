@@ -6,6 +6,7 @@ import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 
 @Entity
 @Table(name = "tax_brackets")
@@ -29,4 +30,6 @@ public class TaxBracket extends BaseEntity {
     private BigDecimal subtractAmount;
 
     private Boolean isActive = true;
+
+    private LocalDate effectiveDate;
 }

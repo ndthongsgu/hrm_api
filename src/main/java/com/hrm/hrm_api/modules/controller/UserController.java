@@ -1,5 +1,7 @@
 package com.hrm.hrm_api.modules.controller;
 
+import com.hrm.hrm_api.common.constants.PermissionDefinition;
+import com.hrm.hrm_api.config.annotations.RequirePermission;
 import com.hrm.hrm_api.modules.dto.base.BaseResponse;
 import com.hrm.hrm_api.modules.dto.base.PageResponse;
 import com.hrm.hrm_api.modules.dto.response.UserResponse;
@@ -30,6 +32,7 @@ public class UserController {
 
     @GetMapping
     @Transactional(readOnly = true)
+    @RequirePermission(module = "PERMISSION", action = PermissionDefinition.READ)
     public ResponseEntity<BaseResponse<PageResponse<UserResponse>>> list(@PageableDefault(size = 20) Pageable pageable) {
         Page<User> page = service.findAll(pageable);
         PageResponse<UserResponse> response = PageResponse.of(
@@ -45,6 +48,7 @@ public class UserController {
 
     @GetMapping("/{id}")
     @Transactional(readOnly = true)
+    @RequirePermission(module = "PERMISSION", action = PermissionDefinition.READ)
     public ResponseEntity<BaseResponse<UserResponse>> getById(@PathVariable UUID id) {
         User user = service.findById(id);
         return ResponseEntity.ok(BaseResponse.ok(UserMapper.toResponse(user)));
@@ -52,6 +56,7 @@ public class UserController {
 
     @PostMapping
     @Transactional
+    @RequirePermission(module = "PERMISSION", action = PermissionDefinition.CREATE)
     public ResponseEntity<BaseResponse<UserResponse>> create(@Valid @RequestBody User payload) {
         User created = service.create(payload);
         return ResponseEntity.ok(BaseResponse.ok(UserMapper.toResponse(created)));
@@ -59,6 +64,7 @@ public class UserController {
 
     @PutMapping("/{id}")
     @Transactional
+    @RequirePermission(module = "PERMISSION", action = PermissionDefinition.UPDATE)
     public ResponseEntity<BaseResponse<UserResponse>> update(@PathVariable UUID id, @Valid @RequestBody User payload) {
         User updated = service.update(id, payload);
         return ResponseEntity.ok(BaseResponse.ok(UserMapper.toResponse(updated)));
@@ -66,6 +72,7 @@ public class UserController {
 
     @DeleteMapping("/{id}")
     @Transactional
+    @RequirePermission(module = "PERMISSION", action = PermissionDefinition.DELETE)
     public ResponseEntity<BaseResponse<Void>> delete(@PathVariable UUID id) {
         service.delete(id);
         return ResponseEntity.ok(BaseResponse.ok(null));

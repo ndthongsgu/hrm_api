@@ -35,7 +35,7 @@ public class User extends BaseEntity {
     private Employee employee; // optional link to employee
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
-    @JsonManagedReference
+    @JsonManagedReference(value = "user-userRoles")
     private Set<UserRole> userRoles = new HashSet<>();
 
     public void addRole(Role role) {

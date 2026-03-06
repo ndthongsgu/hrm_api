@@ -1,5 +1,7 @@
 package com.hrm.hrm_api.modules.controller;
 
+import com.hrm.hrm_api.common.constants.PermissionDefinition;
+import com.hrm.hrm_api.config.annotations.RequirePermission;
 import com.hrm.hrm_api.common.security.SecurityUtil;
 import com.hrm.hrm_api.modules.dto.base.BaseResponse;
 import com.hrm.hrm_api.modules.dto.base.PaginationResponse;
@@ -32,6 +34,15 @@ public class PayrollPeriodController {
         this.securityUtil = securityUtil;
     }
 
+    @GetMapping
+    @RequirePermission(module = "PAYROLL", action = PermissionDefinition.READ)
+    public ResponseEntity<BaseResponse<PageResponse<PayrollPeriod>>> list(@PageableDefault(size = 20) Pageable pageable) {
+        Page<PayrollPeriod> page = service.findAll(pageable);
+        return ResponseEntity.ok(BaseResponse.ok(PaginationUtils.toPageResponse(page)));
+    }
+
+    @PostMapping
+    @RequirePermission(module = "PAYROLL", action = PermissionDefinition.CREATE)
     @PostMapping
     public ResponseEntity<BaseResponse<PaginationResponse<PayrollPeriod>>> search(@RequestBody(required = false) PayrollPeriodSearchRequest request, @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
         PaginationResponse<PayrollPeriod> response = service.search(request, pageable);
@@ -39,6 +50,7 @@ public class PayrollPeriodController {
     }
 
     @GetMapping("/{id}")
+    @RequirePermission(module = "PAYROLL", action = PermissionDefinition.READ)
     public ResponseEntity<BaseResponse<PayrollPeriod>> getById(@PathVariable UUID id) {
         return ResponseEntity.ok(BaseResponse.ok(service.findById(id)));
     }
@@ -59,6 +71,7 @@ public class PayrollPeriodController {
     }
 
     @PutMapping("/{id}")
+    @RequirePermission(module = "PAYROLL", action = PermissionDefinition.UPDATE)
     public ResponseEntity<BaseResponse<PayrollPeriod>> update(@PathVariable UUID id, @Valid @RequestBody PayrollPeriod payload) {
         PayrollPeriod updated = service.update(id, payload);
         
@@ -74,6 +87,7 @@ public class PayrollPeriodController {
     }
 
     @DeleteMapping("/{id}")
+    @RequirePermission(module = "PAYROLL", action = PermissionDefinition.DELETE)
     public ResponseEntity<BaseResponse<String>> delete(@PathVariable UUID id) {
         PayrollPeriod period = service.findById(id);
         service.deactivate(id);

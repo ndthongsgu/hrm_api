@@ -9,6 +9,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 public interface PayslipRepository extends JpaRepository<Payslip, UUID> {
+	Optional<Payslip> findByPayrollPeriodIdAndEmployeeId(UUID payrollPeriodId, UUID employeeId);
     
     @Query("SELECT p FROM Payslip p WHERE p.payrollPeriod.id = :payrollPeriodId AND p.employee.id = :employeeId")
     Optional<Payslip> findByPayrollPeriodAndEmployee(

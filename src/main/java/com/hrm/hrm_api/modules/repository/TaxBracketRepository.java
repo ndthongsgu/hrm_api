@@ -5,10 +5,14 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
 public interface TaxBracketRepository extends JpaRepository<TaxBracket, UUID> {
+	List<TaxBracket> findByIsActiveTrueOrderByMinIncomeAsc();
+
+	List<TaxBracket> findByIsActiveTrueAndEffectiveDateLessThanEqualOrderByMinIncomeAsc(LocalDate effectiveDate);
     
     @Query("SELECT tb FROM TaxBracket tb WHERE tb.isActive = :isActive ORDER BY tb.minIncome ASC")
     List<TaxBracket> findByIsActive(@Param("isActive") Boolean isActive);
