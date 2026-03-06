@@ -5,10 +5,13 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 public interface AttendanceSummaryRepository extends JpaRepository<AttendanceSummary, UUID> {
+
+    List<AttendanceSummary> findByPayrollPeriodId(UUID payrollPeriodId);
     
     @Query("SELECT a FROM AttendanceSummary a WHERE a.payrollPeriod.id = :payrollPeriodId AND a.employee.id = :employeeId")
     Optional<AttendanceSummary> findByPayrollPeriodAndEmployee(
