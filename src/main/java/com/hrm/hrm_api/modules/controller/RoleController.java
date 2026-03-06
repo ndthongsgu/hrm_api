@@ -31,6 +31,8 @@ public class RoleController {
     @RequirePermission(module = "ROLE", action = PermissionDefinition.READ)
     public ResponseEntity<BaseResponse<PageResponse<Role>>> list(@PageableDefault(size = 20) Pageable pageable) {
         Page<Role> page = service.findAll(pageable);
+                return ResponseEntity.ok(BaseResponse.ok(PaginationUtils.toPageResponse(page)));
+    }
     @PostMapping
     public ResponseEntity<BaseResponse<PageResponse<Role>>> search(
             @RequestBody(required = false) RoleSearchRequest request) {
@@ -53,7 +55,6 @@ public class RoleController {
         return ResponseEntity.ok(BaseResponse.ok(service.findById(id)));
     }
 
-    @PostMapping
     @RequirePermission(module = "ROLE", action = PermissionDefinition.CREATE)
     @PostMapping("/create")
     public ResponseEntity<BaseResponse<Role>> create(@Valid @RequestBody Role payload) {
