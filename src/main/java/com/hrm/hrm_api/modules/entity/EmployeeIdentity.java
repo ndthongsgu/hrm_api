@@ -1,5 +1,6 @@
 package com.hrm.hrm_api.modules.entity;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -18,6 +19,7 @@ public class EmployeeIdentity extends BaseEntity {
 
     @ManyToOne
     @JoinColumn(name = "employee_id")
+    @JsonBackReference("employee-identities")
     private Employee employee;
 
     private String identityType; // QR_CODE, FACE_VECTOR, RFID_CARD

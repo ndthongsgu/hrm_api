@@ -1,5 +1,6 @@
 package com.hrm.hrm_api.modules.entity;
 
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -44,11 +45,14 @@ public class Employee extends BaseEntity {
     private String status; // ACTIVE, RESIGNED
 
     @OneToMany(mappedBy = "employee", cascade = CascadeType.ALL)
+    @JsonManagedReference("employee-dependents")
     private List<Dependent> dependents;
 
     @OneToMany(mappedBy = "employee", cascade = CascadeType.ALL)
+    @JsonManagedReference("employee-contracts")
     private List<Contract> contracts;
 
     @OneToMany(mappedBy = "employee", cascade = CascadeType.ALL)
+    @JsonManagedReference("employee-identities")
     private List<EmployeeIdentity> identities;
 }

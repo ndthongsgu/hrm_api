@@ -1,7 +1,15 @@
 package com.hrm.hrm_api.modules.service.contract;
 
 import com.hrm.hrm_api.modules.entity.Contract;
-import com.hrm.hrm_api.modules.service.CrudService;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
-public interface ContractService extends CrudService<Contract> {
+import java.util.UUID;
+
+public interface ContractService {
+    Page<Contract> findAll(Pageable pageable);
+    Contract findById(UUID id);
+    Contract create(Contract entity);
+    Contract update(UUID id, Contract entity);
+    void delete(UUID id);
 }

@@ -25,7 +25,4 @@ public class PayrollPeriod extends BaseEntity {
     private Float standardWorkingDays;
 
     private Boolean isLocked = false;
-
-    @CreationTimestamp
-    private LocalDateTime createdAt;
 }

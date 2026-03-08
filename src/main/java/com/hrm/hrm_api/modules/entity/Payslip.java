@@ -77,7 +77,4 @@ public class Payslip extends BaseEntity {
     // 4. Net
     @Column(precision = 15, scale = 2)
     private BigDecimal netSalary;
-
-    @CreationTimestamp
-    private LocalDateTime createdAt;
 }

@@ -20,6 +20,7 @@ public abstract class BaseEntity {
 
     @Id
     @GeneratedValue(generator = "UUID")
+    @PrimaryKeyJoinColumn
     @org.hibernate.annotations.GenericGenerator(name = "UUID", strategy = "org.hibernate.id.UUIDGenerator")
     @Column(name = "id", columnDefinition = "uuid", updatable = false, nullable = false)
     private UUID id;
@@ -43,5 +44,6 @@ public abstract class BaseEntity {
     @Version
     private Long version;
 
+    @Column(name = "is_deleted", nullable = false, columnDefinition = "boolean default false")
     private Boolean isDeleted = false;
 }

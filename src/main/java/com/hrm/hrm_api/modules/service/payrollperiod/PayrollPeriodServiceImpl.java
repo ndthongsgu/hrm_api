@@ -1,11 +1,12 @@
 package com.hrm.hrm_api.modules.service.payrollperiod;
 
+import com.hrm.hrm_api.common.exception.ResourceNotFoundException;
 import com.hrm.hrm_api.modules.dto.base.PaginationResponse;
+import com.hrm.hrm_api.modules.dto.base.SelectOptionDto;
 import com.hrm.hrm_api.modules.dto.payrollperiod.PayrollPeriodFilter;
 import com.hrm.hrm_api.modules.dto.request.PayrollPeriodSearchRequest;
 import com.hrm.hrm_api.modules.entity.*;
 import com.hrm.hrm_api.modules.repository.*;
-import com.hrm.hrm_api.modules.service.AbstractCrudService;
 import com.hrm.hrm_api.modules.util.ActionLogUtil;
 import org.springframework.stereotype.Service;
 import org.springframework.data.domain.Page;
@@ -19,9 +20,10 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
-public class PayrollPeriodServiceImpl extends AbstractCrudService<PayrollPeriod> implements PayrollPeriodService {
+public class PayrollPeriodServiceImpl implements PayrollPeriodService {
 
     private final PayrollPeriodRepository repository;
     private final EmployeeRepository employeeRepository;
@@ -49,7 +51,6 @@ public class PayrollPeriodServiceImpl extends AbstractCrudService<PayrollPeriod>
             InsuranceConfigRepository insuranceConfigRepository,
             TaxBracketRepository taxBracketRepository,
             ActionLogUtil actionLogUtil) {
-        super(repository, PayrollPeriod.class);
         this.repository = repository;
         this.employeeRepository = employeeRepository;
         this.attendanceSummaryRepository = attendanceSummaryRepository;
@@ -67,6 +68,28 @@ public class PayrollPeriodServiceImpl extends AbstractCrudService<PayrollPeriod>
     @Override
     public Page<PayrollPeriod> findAll(Pageable pageable) {
         return findAll(null, pageable);
+    }
+
+    @Override
+    public PayrollPeriod findById(UUID id) {
+        return repository.findById(id).orElseThrow(() -> new ResourceNotFoundException(PayrollPeriod.class, id));
+    }
+
+    @Override
+    @Transactional
+    public PayrollPeriod update(UUID id, PayrollPeriod entity) {
+        findById(id);
+        entity.setId(id);
+        return repository.save(entity);
+    }
+
+    @Override
+    @Transactional
+    public void delete(UUID id) {
+        if (!repository.existsById(id)) {
+            throw new ResourceNotFoundException(PayrollPeriod.class, id);
+        }
+        repository.deleteById(id);
     }
 
     @Override
@@ -113,6 +136,14 @@ public class PayrollPeriodServiceImpl extends AbstractCrudService<PayrollPeriod>
             payrollPeriods.getNumber(),
             payrollPeriods.getSize()
         );
+    }
+
+    @Override
+    public List<SelectOptionDto> getSelectOptions() {
+        List<PayrollPeriod> payrollPeriods = repository.findAllByIsDeletedFalseOrderByCreatedAtDesc();
+        return payrollPeriods.stream()
+                .map(period -> new SelectOptionDto(period.getId(), period.getName()))
+                .collect(Collectors.toList());
     }
 
     /**

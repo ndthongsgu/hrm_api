@@ -1,20 +1,35 @@
 package com.hrm.hrm_api.modules.service.user;
 
+import com.hrm.hrm_api.common.exception.ResourceNotFoundException;
 import com.hrm.hrm_api.modules.entity.User;
 import com.hrm.hrm_api.modules.repository.UserRepository;
-import com.hrm.hrm_api.modules.service.AbstractCrudService;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-@Service
-public class UserServiceImpl extends AbstractCrudService<User> implements UserService {
+import java.util.UUID;
 
+@Service
+public class UserServiceImpl implements UserService {
+
+    private final UserRepository repository;
     private final PasswordEncoder passwordEncoder;
 
     public UserServiceImpl(UserRepository repository, PasswordEncoder passwordEncoder) {
-        super(repository, User.class);
+        this.repository = repository;
         this.passwordEncoder = passwordEncoder;
+    }
+
+    @Override
+    public Page<User> findAll(Pageable pageable) {
+        return repository.findAll(pageable);
+    }
+
+    @Override
+    public User findById(UUID id) {
+        return repository.findById(id).orElseThrow(() -> new ResourceNotFoundException(User.class, id));
     }
 
     @Override
@@ -23,19 +38,29 @@ public class UserServiceImpl extends AbstractCrudService<User> implements UserSe
         if (entity.getPassword() != null && !entity.getPassword().isEmpty()) {
             entity.setPassword(passwordEncoder.encode(entity.getPassword()));
         }
-        return super.create(entity);
+        return repository.save(entity);
     }
 
     @Override
     @Transactional
-    public User update(java.util.UUID id, User entity) {
+    public User update(UUID id, User entity) {
         if (entity.getPassword() != null && !entity.getPassword().isEmpty()) {
             entity.setPassword(passwordEncoder.encode(entity.getPassword()));
         } else {
-            // don't overwrite password if not provided
             User existing = findById(id);
             entity.setPassword(existing.getPassword());
         }
-        return super.update(id, entity);
+        findById(id);
+        entity.setId(id);
+        return repository.save(entity);
+    }
+
+    @Override
+    @Transactional
+    public void delete(UUID id) {
+        if (!repository.existsById(id)) {
+            throw new ResourceNotFoundException(User.class, id);
+        }
+        repository.deleteById(id);
     }
 }

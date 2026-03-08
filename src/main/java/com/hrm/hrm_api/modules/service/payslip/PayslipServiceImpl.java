@@ -19,7 +19,9 @@ import com.hrm.hrm_api.modules.repository.PayslipRepository;
 import com.hrm.hrm_api.modules.repository.SalaryAdjustmentRepository;
 import com.hrm.hrm_api.modules.repository.SysSettingRepository;
 import com.hrm.hrm_api.modules.repository.TaxBracketRepository;
-import com.hrm.hrm_api.modules.service.AbstractCrudService;
+import com.hrm.hrm_api.common.exception.ResourceNotFoundException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,7 +35,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Service
-public class PayslipServiceImpl extends AbstractCrudService<Payslip> implements PayslipService {
+public class PayslipServiceImpl implements PayslipService {
 
     private static final BigDecimal ZERO = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
 
@@ -60,7 +62,6 @@ public class PayslipServiceImpl extends AbstractCrudService<Payslip> implements 
             TaxBracketRepository taxBracketRepository,
             InsuranceConfigRepository insuranceConfigRepository
     ) {
-        super(repository, Payslip.class);
         this.payslipRepository = repository;
         this.payrollPeriodRepository = payrollPeriodRepository;
         this.attendanceSummaryRepository = attendanceSummaryRepository;
@@ -71,6 +72,39 @@ public class PayslipServiceImpl extends AbstractCrudService<Payslip> implements 
         this.sysSettingRepository = sysSettingRepository;
         this.taxBracketRepository = taxBracketRepository;
         this.insuranceConfigRepository = insuranceConfigRepository;
+    }
+
+    @Override
+    public Page<Payslip> findAll(Pageable pageable) {
+        return payslipRepository.findAll(pageable);
+    }
+
+    @Override
+    public Payslip findById(UUID id) {
+        return payslipRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException(Payslip.class, id));
+    }
+
+    @Override
+    @Transactional
+    public Payslip create(Payslip entity) {
+        return payslipRepository.save(entity);
+    }
+
+    @Override
+    @Transactional
+    public Payslip update(UUID id, Payslip entity) {
+        findById(id);
+        entity.setId(id);
+        return payslipRepository.save(entity);
+    }
+
+    @Override
+    @Transactional
+    public void delete(UUID id) {
+        if (!payslipRepository.existsById(id)) {
+            throw new ResourceNotFoundException(Payslip.class, id);
+        }
+        payslipRepository.deleteById(id);
     }
 
     @Override

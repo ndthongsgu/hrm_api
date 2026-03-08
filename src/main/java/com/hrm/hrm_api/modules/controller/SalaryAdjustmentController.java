@@ -1,26 +1,40 @@
 package com.hrm.hrm_api.modules.controller;
 
+import com.hrm.hrm_api.common.security.SecurityUtil;
 import com.hrm.hrm_api.modules.dto.base.BaseResponse;
 import com.hrm.hrm_api.modules.dto.base.PageResponse;
+import com.hrm.hrm_api.modules.dto.base.PaginationResponse;
+import com.hrm.hrm_api.modules.dto.request.SalaryAdjustmentCreateRequest;
+import com.hrm.hrm_api.modules.dto.request.SalaryAdjustmentSearchRequest;
+import com.hrm.hrm_api.modules.entity.AttendanceSummary;
 import com.hrm.hrm_api.modules.entity.SalaryAdjustment;
 import com.hrm.hrm_api.modules.service.salaryadjustment.SalaryAdjustmentService;
+import com.hrm.hrm_api.modules.util.ActionLogUtil;
 import com.hrm.hrm_api.modules.util.PaginationUtils;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
+import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/salary-adjustments")
 public class SalaryAdjustmentController {
 
     private final SalaryAdjustmentService service;
+    private final ActionLogUtil actionLogUtil;
+    private final SecurityUtil securityUtil;
 
-    public SalaryAdjustmentController(SalaryAdjustmentService service) {
+
+    public SalaryAdjustmentController(SalaryAdjustmentService service, ActionLogUtil actionLogUtil, SecurityUtil securityUtil ) {
         this.service = service;
+        this.actionLogUtil = actionLogUtil;
+        this.securityUtil = securityUtil;
     }
 
     @GetMapping
@@ -29,24 +43,64 @@ public class SalaryAdjustmentController {
         return ResponseEntity.ok(BaseResponse.ok(PaginationUtils.toPageResponse(page)));
     }
 
+    @PostMapping
+    public ResponseEntity<BaseResponse<PaginationResponse<SalaryAdjustment>>> search(@RequestBody(required = false) SalaryAdjustmentSearchRequest request, @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        PaginationResponse<SalaryAdjustment> response = service.search(request, pageable);
+        return ResponseEntity.ok(BaseResponse.ok(response));
+    }
+
     @GetMapping("/{id}")
-    public ResponseEntity<BaseResponse<SalaryAdjustment>> getById(@PathVariable java.util.UUID id) {
+    public ResponseEntity<BaseResponse<SalaryAdjustment>> getById(@PathVariable UUID id) {
         return ResponseEntity.ok(BaseResponse.ok(service.findById(id)));
     }
 
-    @PostMapping
-    public ResponseEntity<BaseResponse<SalaryAdjustment>> create(@Valid @RequestBody SalaryAdjustment payload) {
-        return ResponseEntity.ok(BaseResponse.ok(service.create(payload)));
+    @PostMapping("/create")
+    public ResponseEntity<BaseResponse<SalaryAdjustment>> create(@Valid @RequestBody SalaryAdjustmentCreateRequest request) {
+        SalaryAdjustment created = service.createFromRequest(request);
+
+        actionLogUtil.logCreate(
+                created.getId(),
+                "SALARY_ADJUSTMENT",
+                "Tạo điều chỉnh lương cho nhân viên",
+                securityUtil.getCurrentUsername()
+        );
+        return ResponseEntity.ok(BaseResponse.ok(created));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<BaseResponse<SalaryAdjustment>> update(@PathVariable java.util.UUID id, @Valid @RequestBody SalaryAdjustment payload) {
-        return ResponseEntity.ok(BaseResponse.ok(service.update(id, payload)));
+    public ResponseEntity<BaseResponse<SalaryAdjustment>> update(@PathVariable UUID id, @Valid @RequestBody SalaryAdjustmentCreateRequest request) {
+        return ResponseEntity.ok(BaseResponse.ok(service.updateFromRequest(id, request)));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<BaseResponse<Void>> delete(@PathVariable java.util.UUID id) {
-        service.delete(id);
-        return ResponseEntity.ok(BaseResponse.ok(null));
+    public ResponseEntity<BaseResponse<String>> delete(@PathVariable UUID id) {
+        SalaryAdjustment adjustment = service.findById(id);
+        service.deactivate(id);
+        return ResponseEntity.ok(BaseResponse.ok("Ngừng hoạt động salary adjustment thành công"));
+    }
+
+    /**
+     * Kích hoạt lại salary adjustment (Soft delete recovery)
+     */
+    @PutMapping("/{id}/activate")
+    public ResponseEntity<BaseResponse<String>> activate(@PathVariable UUID id) {
+        SalaryAdjustment adjustment = service.findById(id);
+        service.activate(id);
+        return ResponseEntity.ok(BaseResponse.ok("Kích hoạt lại salary adjustment thành công"));
+    }
+
+    @PutMapping("/payroll-period/{payrollPeriodId}/employee/{employeeId}")
+    public ResponseEntity<BaseResponse<SalaryAdjustment>> upsertByPayrollPeriodAndEmployee(
+            @PathVariable UUID payrollPeriodId,
+            @PathVariable UUID employeeId,
+            @Valid @RequestBody SalaryAdjustment payload) {
+        return ResponseEntity.ok(BaseResponse.ok(service.upsertByPayrollPeriodAndEmployee(payrollPeriodId, employeeId, payload)));
+    }
+
+    @PutMapping("/payroll-period/{payrollPeriodId}/batch")
+    public ResponseEntity<BaseResponse<List<SalaryAdjustment>>> batchUpsertByPayrollPeriod(
+            @PathVariable UUID payrollPeriodId,
+            @Valid @RequestBody List<SalaryAdjustment> adjustments) {
+        return ResponseEntity.ok(BaseResponse.ok(service.batchUpsertByPayrollPeriod(payrollPeriodId, adjustments)));
     }
 }

@@ -6,6 +6,7 @@ import com.hrm.hrm_api.common.security.SecurityUtil;
 import com.hrm.hrm_api.modules.dto.base.BaseResponse;
 import com.hrm.hrm_api.modules.dto.base.PageResponse;
 import com.hrm.hrm_api.modules.dto.base.PaginationResponse;
+import com.hrm.hrm_api.modules.dto.base.SelectOptionDto;
 import com.hrm.hrm_api.modules.dto.payrollperiod.PayrollPeriodFilter;
 import com.hrm.hrm_api.modules.dto.request.PayrollPeriodSearchRequest;
 import com.hrm.hrm_api.modules.entity.PayrollPeriod;
@@ -20,6 +21,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -36,18 +38,18 @@ public class PayrollPeriodController {
         this.securityUtil = securityUtil;
     }
 
-    @GetMapping
-    @RequirePermission(module = "PAYROLL", action = PermissionDefinition.READ)
-    public ResponseEntity<BaseResponse<PageResponse<PayrollPeriod>>> list(@PageableDefault(size = 20) Pageable pageable) {
-        Page<PayrollPeriod> page = service.findAll(pageable);
-        return ResponseEntity.ok(BaseResponse.ok(PaginationUtils.toPageResponse(page)));
-    }
-
     @PostMapping
-    @RequirePermission(module = "PAYROLL", action = PermissionDefinition.CREATE)
+    @RequirePermission(module = "PAYROLL", action = PermissionDefinition.READ)
     public ResponseEntity<BaseResponse<PaginationResponse<PayrollPeriod>>> search(@RequestBody(required = false) PayrollPeriodSearchRequest request, @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
         PaginationResponse<PayrollPeriod> response = service.search(request, pageable);
         return ResponseEntity.ok(BaseResponse.ok(response));
+    }
+
+    @GetMapping("/select-options")
+    @RequirePermission(module = "PAYROLL", action = PermissionDefinition.READ)
+    public ResponseEntity<BaseResponse<List<SelectOptionDto>>> getSelectOptions() {
+        List<SelectOptionDto> options = service.getSelectOptions();
+        return ResponseEntity.ok(BaseResponse.ok(options));
     }
 
     @GetMapping("/{id}")

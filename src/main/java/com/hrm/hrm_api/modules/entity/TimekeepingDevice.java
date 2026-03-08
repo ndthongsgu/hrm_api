@@ -28,7 +28,4 @@ public class TimekeepingDevice extends BaseEntity {
     private String location;
 
     private String status = "ACTIVE";
-
-    @CreationTimestamp
-    private LocalDateTime createdAt;
 }

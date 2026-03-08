@@ -27,7 +27,4 @@ public class SysSetting extends BaseEntity {
     private String description;
 
     private LocalDate effectiveDate;
-
-    @CreationTimestamp
-    private LocalDateTime createdAt;
 }

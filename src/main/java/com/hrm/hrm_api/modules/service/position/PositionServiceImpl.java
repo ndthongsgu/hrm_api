@@ -1,26 +1,59 @@
 package com.hrm.hrm_api.modules.service.position;
 
+import com.hrm.hrm_api.common.exception.ResourceNotFoundException;
 import com.hrm.hrm_api.modules.dto.base.PaginationResponse;
 import com.hrm.hrm_api.modules.dto.request.PositionSearchRequest;
 import com.hrm.hrm_api.modules.entity.Position;
 import com.hrm.hrm_api.modules.repository.PositionRepository;
-import com.hrm.hrm_api.modules.service.AbstractCrudService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
+import java.util.UUID;
 
 @Service
-public class PositionServiceImpl extends AbstractCrudService<Position> implements PositionService {
+public class PositionServiceImpl implements PositionService {
 
     private final PositionRepository positionRepository;
 
     public PositionServiceImpl(PositionRepository repository) {
-        super(repository, Position.class);
         this.positionRepository = repository;
+    }
+
+    @Override
+    public Page<Position> findAll(Pageable pageable) {
+        return positionRepository.findAll(pageable);
+    }
+
+    @Override
+    public Position findById(UUID id) {
+        return positionRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException(Position.class, id));
+    }
+
+    @Override
+    @Transactional
+    public Position create(Position entity) {
+        return positionRepository.save(entity);
+    }
+
+    @Override
+    @Transactional
+    public Position update(UUID id, Position entity) {
+        findById(id);
+        entity.setId(id);
+        return positionRepository.save(entity);
+    }
+
+    @Override
+    @Transactional
+    public void delete(UUID id) {
+        if (!positionRepository.existsById(id)) {
+            throw new ResourceNotFoundException(Position.class, id);
+        }
+        positionRepository.deleteById(id);
     }
 
     @Override

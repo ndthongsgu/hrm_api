@@ -1,21 +1,56 @@
 package com.hrm.hrm_api.modules.service.role;
 
+import com.hrm.hrm_api.common.exception.ResourceNotFoundException;
 import com.hrm.hrm_api.modules.dto.request.RoleSearchRequest;
 import com.hrm.hrm_api.modules.entity.Role;
 import com.hrm.hrm_api.modules.repository.RoleRepository;
-import com.hrm.hrm_api.modules.service.AbstractCrudService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.UUID;
 
 @Service
-public class RoleServiceImpl extends AbstractCrudService<Role> implements RoleService {
+public class RoleServiceImpl implements RoleService {
 
     private final RoleRepository roleRepository;
 
     public RoleServiceImpl(RoleRepository repository) {
-        super(repository, Role.class);
         this.roleRepository = repository;
+    }
+
+    @Override
+    public Page<Role> findAll(Pageable pageable) {
+        return roleRepository.findAll(pageable);
+    }
+
+    @Override
+    public Role findById(UUID id) {
+        return roleRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException(Role.class, id));
+    }
+
+    @Override
+    @Transactional
+    public Role create(Role entity) {
+        return roleRepository.save(entity);
+    }
+
+    @Override
+    @Transactional
+    public Role update(UUID id, Role entity) {
+        findById(id);
+        entity.setId(id);
+        return roleRepository.save(entity);
+    }
+
+    @Override
+    @Transactional
+    public void delete(UUID id) {
+        if (!roleRepository.existsById(id)) {
+            throw new ResourceNotFoundException(Role.class, id);
+        }
+        roleRepository.deleteById(id);
     }
 
     @Override
