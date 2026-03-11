@@ -1,15 +1,12 @@
 package com.hrm.hrm_api.modules.controller;
 
-import com.hrm.hrm_api.common.security.SecurityUtil;
 import com.hrm.hrm_api.modules.dto.base.BaseResponse;
 import com.hrm.hrm_api.modules.dto.base.PageResponse;
 import com.hrm.hrm_api.modules.dto.base.PaginationResponse;
 import com.hrm.hrm_api.modules.dto.request.SalaryAdjustmentCreateRequest;
 import com.hrm.hrm_api.modules.dto.request.SalaryAdjustmentSearchRequest;
-import com.hrm.hrm_api.modules.entity.AttendanceSummary;
 import com.hrm.hrm_api.modules.entity.SalaryAdjustment;
 import com.hrm.hrm_api.modules.service.salaryadjustment.SalaryAdjustmentService;
-import com.hrm.hrm_api.modules.util.ActionLogUtil;
 import com.hrm.hrm_api.modules.util.PaginationUtils;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -27,14 +24,9 @@ import java.util.UUID;
 public class SalaryAdjustmentController {
 
     private final SalaryAdjustmentService service;
-    private final ActionLogUtil actionLogUtil;
-    private final SecurityUtil securityUtil;
 
-
-    public SalaryAdjustmentController(SalaryAdjustmentService service, ActionLogUtil actionLogUtil, SecurityUtil securityUtil ) {
+    public SalaryAdjustmentController(SalaryAdjustmentService service) {
         this.service = service;
-        this.actionLogUtil = actionLogUtil;
-        this.securityUtil = securityUtil;
     }
 
     @GetMapping
@@ -56,25 +48,17 @@ public class SalaryAdjustmentController {
 
     @PostMapping("/create")
     public ResponseEntity<BaseResponse<SalaryAdjustment>> create(@Valid @RequestBody SalaryAdjustmentCreateRequest request) {
-        SalaryAdjustment created = service.createFromRequest(request);
-
-        actionLogUtil.logCreate(
-                created.getId(),
-                "SALARY_ADJUSTMENT",
-                "Tạo điều chỉnh lương cho nhân viên",
-                securityUtil.getCurrentUsername()
-        );
+        SalaryAdjustment created = service.create(request);
         return ResponseEntity.ok(BaseResponse.ok(created));
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<BaseResponse<SalaryAdjustment>> update(@PathVariable UUID id, @Valid @RequestBody SalaryAdjustmentCreateRequest request) {
-        return ResponseEntity.ok(BaseResponse.ok(service.updateFromRequest(id, request)));
+        return ResponseEntity.ok(BaseResponse.ok(service.update(id, request)));
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<BaseResponse<String>> delete(@PathVariable UUID id) {
-        SalaryAdjustment adjustment = service.findById(id);
         service.deactivate(id);
         return ResponseEntity.ok(BaseResponse.ok("Ngừng hoạt động salary adjustment thành công"));
     }
@@ -84,7 +68,6 @@ public class SalaryAdjustmentController {
      */
     @PutMapping("/{id}/activate")
     public ResponseEntity<BaseResponse<String>> activate(@PathVariable UUID id) {
-        SalaryAdjustment adjustment = service.findById(id);
         service.activate(id);
         return ResponseEntity.ok(BaseResponse.ok("Kích hoạt lại salary adjustment thành công"));
     }

@@ -2,18 +2,12 @@ package com.hrm.hrm_api.modules.controller;
 
 import com.hrm.hrm_api.common.constants.PermissionDefinition;
 import com.hrm.hrm_api.config.annotations.RequirePermission;
-import com.hrm.hrm_api.common.security.SecurityUtil;
 import com.hrm.hrm_api.modules.dto.base.BaseResponse;
-import com.hrm.hrm_api.modules.dto.base.PageResponse;
 import com.hrm.hrm_api.modules.dto.base.PaginationResponse;
 import com.hrm.hrm_api.modules.dto.base.SelectOptionDto;
-import com.hrm.hrm_api.modules.dto.payrollperiod.PayrollPeriodFilter;
 import com.hrm.hrm_api.modules.dto.request.PayrollPeriodSearchRequest;
 import com.hrm.hrm_api.modules.entity.PayrollPeriod;
 import com.hrm.hrm_api.modules.service.payrollperiod.PayrollPeriodService;
-import com.hrm.hrm_api.modules.util.ActionLogUtil;
-import com.hrm.hrm_api.modules.util.PaginationUtils;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
@@ -29,13 +23,9 @@ import java.util.UUID;
 public class PayrollPeriodController {
 
     private final PayrollPeriodService service;
-    private final ActionLogUtil actionLogUtil;
-    private final SecurityUtil securityUtil;
 
-    public PayrollPeriodController(PayrollPeriodService service, ActionLogUtil actionLogUtil, SecurityUtil securityUtil) {
+    public PayrollPeriodController(PayrollPeriodService service) {
         this.service = service;
-        this.actionLogUtil = actionLogUtil;
-        this.securityUtil = securityUtil;
     }
 
     @PostMapping
@@ -61,48 +51,19 @@ public class PayrollPeriodController {
     @PostMapping("/create")
     public ResponseEntity<BaseResponse<PayrollPeriod>> create(@Valid @RequestBody PayrollPeriod payload) {
         PayrollPeriod created = service.create(payload);
-        
-        // Log action
-        actionLogUtil.logCreate(
-            created.getId(),
-            "PAYROLL_PERIOD",
-            "Tạo kỳ lương: " + created.getName(),
-            securityUtil.getCurrentUsername()
-        );
-        
         return ResponseEntity.ok(BaseResponse.ok(created));
     }
 
     @PutMapping("/{id}")
     @RequirePermission(module = "PAYROLL", action = PermissionDefinition.UPDATE)
     public ResponseEntity<BaseResponse<PayrollPeriod>> update(@PathVariable UUID id, @Valid @RequestBody PayrollPeriod payload) {
-        PayrollPeriod updated = service.update(id, payload);
-        
-        // Log action
-        actionLogUtil.logUpdate(
-            id,
-            "PAYROLL_PERIOD",
-            "Cập nhật kỳ lương: " + updated.getName(),
-            securityUtil.getCurrentUsername()
-        );
-        
-        return ResponseEntity.ok(BaseResponse.ok(updated));
+        return ResponseEntity.ok(BaseResponse.ok(service.update(id, payload)));
     }
 
     @DeleteMapping("/{id}")
     @RequirePermission(module = "PAYROLL", action = PermissionDefinition.DELETE)
     public ResponseEntity<BaseResponse<String>> delete(@PathVariable UUID id) {
-        PayrollPeriod period = service.findById(id);
         service.deactivate(id);
-        
-        // Log action
-        actionLogUtil.logDeactivate(
-            id,
-            "PAYROLL_PERIOD",
-            "Ngừng hoạt động kỳ lương: " + period.getName(),
-            securityUtil.getCurrentUsername()
-        );
-        
         return ResponseEntity.ok(BaseResponse.ok("Ngừng hoạt động kỳ lương thành công"));
     }
 
@@ -111,17 +72,7 @@ public class PayrollPeriodController {
      */
     @PutMapping("/{id}/activate")
     public ResponseEntity<BaseResponse<String>> activate(@PathVariable UUID id) {
-        PayrollPeriod period = service.findById(id);
         service.activate(id);
-        
-        // Log action
-        actionLogUtil.logActivate(
-            id,
-            "PAYROLL_PERIOD",
-            "Kích hoạt lại kỳ lương: " + period.getName(),
-            securityUtil.getCurrentUsername()
-        );
-        
         return ResponseEntity.ok(BaseResponse.ok("Kích hoạt lại kỳ lương thành công"));
     }
 

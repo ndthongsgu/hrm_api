@@ -1,6 +1,7 @@
 package com.hrm.hrm_api.modules.service.salaryadjustment;
 
 import com.hrm.hrm_api.common.exception.ResourceNotFoundException;
+import com.hrm.hrm_api.common.security.SecurityUtil;
 import com.hrm.hrm_api.modules.dto.base.PaginationResponse;
 import com.hrm.hrm_api.modules.dto.request.SalaryAdjustmentCreateRequest;
 import com.hrm.hrm_api.modules.dto.request.SalaryAdjustmentSearchRequest;
@@ -9,9 +10,9 @@ import com.hrm.hrm_api.modules.entity.SalaryAdjustment;
 import com.hrm.hrm_api.modules.entity.Employee;
 import com.hrm.hrm_api.modules.entity.PayrollPeriod;
 import com.hrm.hrm_api.modules.repository.SalaryAdjustmentRepository;
+import com.hrm.hrm_api.modules.util.ActionLogUtil;
 import jakarta.persistence.EntityManager;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
@@ -26,29 +27,20 @@ public class SalaryAdjustmentServiceImpl implements SalaryAdjustmentService {
 
     private final SalaryAdjustmentRepository repository;
     private final EntityManager entityManager;
+    private final ActionLogUtil actionLogUtil;
+    private final SecurityUtil securityUtil;
 
-    public SalaryAdjustmentServiceImpl(SalaryAdjustmentRepository repository, EntityManager entityManager) {
+    public SalaryAdjustmentServiceImpl(SalaryAdjustmentRepository repository, EntityManager entityManager,
+            ActionLogUtil actionLogUtil, SecurityUtil securityUtil) {
         this.repository = repository;
         this.entityManager = entityManager;
+        this.actionLogUtil = actionLogUtil;
+        this.securityUtil = securityUtil;
     }
 
     @Override
     public SalaryAdjustment findById(UUID id) {
         return repository.findById(id).orElseThrow(() -> new ResourceNotFoundException(SalaryAdjustment.class, id));
-    }
-
-    @Override
-    @Transactional
-    public SalaryAdjustment create(SalaryAdjustment entity) {
-        return repository.save(entity);
-    }
-
-    @Override
-    @Transactional
-    public SalaryAdjustment update(UUID id, SalaryAdjustment entity) {
-        findById(id);
-        entity.setId(id);
-        return repository.save(entity);
     }
 
     @Override
@@ -62,9 +54,20 @@ public class SalaryAdjustmentServiceImpl implements SalaryAdjustmentService {
 
     @Override
     @Transactional
-    public SalaryAdjustment createFromRequest(SalaryAdjustmentCreateRequest request) {
-        PayrollPeriod payrollPeriod = entityManager.getReference(PayrollPeriod.class, request.getPayrollPeriodId());
-        Employee employee = entityManager.getReference(Employee.class, request.getEmployeeId());
+    public SalaryAdjustment create(SalaryAdjustmentCreateRequest request) {
+        PayrollPeriod payrollPeriod = entityManager.find(PayrollPeriod.class, request.getPayrollPeriodId());
+        if (payrollPeriod == null) {
+            throw new ResourceNotFoundException(PayrollPeriod.class, request.getPayrollPeriodId());
+        }
+
+        if (request.getEmployeeId() == null) {
+            throw new IllegalArgumentException("Nhân viên không được để trống");
+        }
+
+        Employee employee = entityManager.find(Employee.class, request.getEmployeeId());
+        if (employee == null) {
+            throw new ResourceNotFoundException(Employee.class, request.getEmployeeId());
+        }
 
         SalaryAdjustment entity = new SalaryAdjustment();
         entity.setPayrollPeriod(payrollPeriod);
@@ -74,16 +77,36 @@ public class SalaryAdjustmentServiceImpl implements SalaryAdjustmentService {
         entity.setReason(request.getReason());
         entity.setIsTaxable(request.getIsTaxable());
         entity.setIsNetOnly(request.getIsNetOnly());
-        return repository.save(entity);
+
+        SalaryAdjustment saved = repository.save(entity);
+
+        try {
+            actionLogUtil.logCreate(
+                    saved.getId(),
+                    "SALARY_ADJUSTMENT",
+                    "Tạo điều chỉnh lương",
+                    securityUtil.getCurrentUsername());
+        } catch (Exception e) {
+            // log nếu cần, tránh làm fail nghiệp vụ chính
+        }
+
+        return saved;
     }
 
     @Override
     @Transactional
-    public SalaryAdjustment updateFromRequest(UUID id, SalaryAdjustmentCreateRequest request) {
+    public SalaryAdjustment update(UUID id, SalaryAdjustmentCreateRequest request) {
         SalaryAdjustment entity = findById(id);
 
-        PayrollPeriod payrollPeriod = entityManager.getReference(PayrollPeriod.class, request.getPayrollPeriodId());
-        Employee employee = entityManager.getReference(Employee.class, request.getEmployeeId());
+        PayrollPeriod payrollPeriod = entityManager.find(PayrollPeriod.class, request.getPayrollPeriodId());
+        if (payrollPeriod == null) {
+            throw new ResourceNotFoundException(PayrollPeriod.class, request.getPayrollPeriodId());
+        }
+
+        Employee employee = entityManager.find(Employee.class, request.getEmployeeId());
+        if (employee == null) {
+            throw new ResourceNotFoundException(Employee.class, request.getEmployeeId());
+        }
 
         entity.setPayrollPeriod(payrollPeriod);
         entity.setEmployee(employee);
@@ -92,12 +115,21 @@ public class SalaryAdjustmentServiceImpl implements SalaryAdjustmentService {
         entity.setReason(request.getReason());
         entity.setIsTaxable(request.getIsTaxable());
         entity.setIsNetOnly(request.getIsNetOnly());
-        return repository.save(entity);
+        SalaryAdjustment updated = repository.save(entity);
+
+        actionLogUtil.logUpdate(
+                updated.getId(),
+                "SALARY_ADJUSTMENT",
+                "Cập nhật điều chỉnh lương",
+                securityUtil.getCurrentUsername());
+
+        return updated;
     }
 
     @Override
     @Transactional
-    public SalaryAdjustment upsertByPayrollPeriodAndEmployee(UUID payrollPeriodId, UUID employeeId, SalaryAdjustment payload) {
+    public SalaryAdjustment upsertByPayrollPeriodAndEmployee(UUID payrollPeriodId, UUID employeeId,
+            SalaryAdjustment payload) {
         List<SalaryAdjustment> existing = repository.findByPayrollPeriodIdAndEmployeeId(payrollPeriodId, employeeId);
         if (!existing.isEmpty()) {
             // Update the first one, assuming only one per employee per period
@@ -110,8 +142,16 @@ public class SalaryAdjustmentServiceImpl implements SalaryAdjustmentService {
             return repository.save(adjustment);
         } else {
             // Create new
-            PayrollPeriod payrollPeriod = entityManager.getReference(PayrollPeriod.class, payrollPeriodId);
-            Employee employee = entityManager.getReference(Employee.class, employeeId);
+            PayrollPeriod payrollPeriod = entityManager.find(PayrollPeriod.class, payrollPeriodId);
+            if (payrollPeriod == null) {
+                throw new ResourceNotFoundException(PayrollPeriod.class, payrollPeriodId);
+            }
+
+            Employee employee = entityManager.find(Employee.class, employeeId);
+            if (employee == null) {
+                throw new ResourceNotFoundException(Employee.class, employeeId);
+            }
+
             payload.setPayrollPeriod(payrollPeriod);
             payload.setEmployee(employee);
             return repository.save(payload);
@@ -134,7 +174,8 @@ public class SalaryAdjustmentServiceImpl implements SalaryAdjustmentService {
 
             if (filter != null) {
                 if (filter.getPayrollPeriodId() != null) {
-                    predicates = cb.and(predicates, cb.equal(root.get("payrollPeriod").get("id"), filter.getPayrollPeriodId()));
+                    predicates = cb.and(predicates,
+                            cb.equal(root.get("payrollPeriod").get("id"), filter.getPayrollPeriodId()));
                 }
                 if (filter.getEmployeeId() != null) {
                     predicates = cb.and(predicates, cb.equal(root.get("employee").get("id"), filter.getEmployeeId()));
@@ -158,11 +199,13 @@ public class SalaryAdjustmentServiceImpl implements SalaryAdjustmentService {
                     predicates = cb.and(predicates, cb.equal(root.get("isDeleted"), filter.getIsDeleted()));
                 } else {
                     // Default to not deleted
-                    predicates = cb.and(predicates, cb.or(cb.isNull(root.get("isDeleted")), cb.isFalse(root.get("isDeleted"))));
+                    predicates = cb.and(predicates,
+                            cb.or(cb.isNull(root.get("isDeleted")), cb.isFalse(root.get("isDeleted"))));
                 }
             } else {
                 // Default to not deleted
-                predicates = cb.and(predicates, cb.or(cb.isNull(root.get("isDeleted")), cb.isFalse(root.get("isDeleted"))));
+                predicates = cb.and(predicates,
+                        cb.or(cb.isNull(root.get("isDeleted")), cb.isFalse(root.get("isDeleted"))));
             }
 
             return predicates;
@@ -179,8 +222,7 @@ public class SalaryAdjustmentServiceImpl implements SalaryAdjustmentService {
                 salaryAdjustments.getContent(),
                 salaryAdjustments.getTotalElements(),
                 salaryAdjustments.getNumber(),
-                salaryAdjustments.getSize()
-        );
+                salaryAdjustments.getSize());
     }
 
     @Override
@@ -190,6 +232,12 @@ public class SalaryAdjustmentServiceImpl implements SalaryAdjustmentService {
                 .orElseThrow(() -> new RuntimeException("SalaryAdjustment not found"));
         adjustment.setIsDeleted(true);
         repository.save(adjustment);
+
+        actionLogUtil.logDelete(
+                id,
+                "SALARY_ADJUSTMENT",
+                "Ngừng hoạt động điều chỉnh lương",
+                securityUtil.getCurrentUsername());
     }
 
     @Override
@@ -199,16 +247,26 @@ public class SalaryAdjustmentServiceImpl implements SalaryAdjustmentService {
                 .orElseThrow(() -> new RuntimeException("SalaryAdjustment not found"));
         adjustment.setIsDeleted(false);
         repository.save(adjustment);
+
+        actionLogUtil.logActivate(
+                id,
+                "SALARY_ADJUSTMENT",
+                "Kích hoạt lại điều chỉnh lương",
+                securityUtil.getCurrentUsername());
     }
 
     @Override
     @Transactional
     public List<SalaryAdjustment> batchUpsertByPayrollPeriod(UUID payrollPeriodId, List<SalaryAdjustment> adjustments) {
-        PayrollPeriod payrollPeriod = entityManager.getReference(PayrollPeriod.class, payrollPeriodId);
+        PayrollPeriod payrollPeriod = entityManager.find(PayrollPeriod.class, payrollPeriodId);
+        if (payrollPeriod == null) {
+            throw new ResourceNotFoundException(PayrollPeriod.class, payrollPeriodId);
+        }
 
         return adjustments.stream().map(adjustment -> {
             UUID employeeId = adjustment.getEmployee().getId();
-            List<SalaryAdjustment> existing = repository.findByPayrollPeriodIdAndEmployeeId(payrollPeriodId, employeeId);
+            List<SalaryAdjustment> existing = repository.findByPayrollPeriodIdAndEmployeeId(payrollPeriodId,
+                    employeeId);
             if (!existing.isEmpty()) {
                 // Update existing
                 SalaryAdjustment existingAdjustment = existing.get(0);
@@ -220,7 +278,11 @@ public class SalaryAdjustmentServiceImpl implements SalaryAdjustmentService {
                 return repository.save(existingAdjustment);
             } else {
                 // Create new
-                Employee employee = entityManager.getReference(Employee.class, employeeId);
+                Employee employee = entityManager.find(Employee.class, employeeId);
+                if (employee == null) {
+                    throw new ResourceNotFoundException(Employee.class, employeeId);
+                }
+
                 adjustment.setPayrollPeriod(payrollPeriod);
                 adjustment.setEmployee(employee);
                 return repository.save(adjustment);

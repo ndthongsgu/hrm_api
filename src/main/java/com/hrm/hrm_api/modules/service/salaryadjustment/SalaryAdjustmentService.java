@@ -14,11 +14,9 @@ import java.util.UUID;
 public interface SalaryAdjustmentService {
     Page<SalaryAdjustment> findAll(Pageable pageable);
     SalaryAdjustment findById(UUID id);
-    SalaryAdjustment create(SalaryAdjustment entity);
-    SalaryAdjustment update(UUID id, SalaryAdjustment entity);
     void delete(UUID id);
-    SalaryAdjustment createFromRequest(SalaryAdjustmentCreateRequest request);
-    SalaryAdjustment updateFromRequest(UUID id, SalaryAdjustmentCreateRequest request);
+    SalaryAdjustment create(SalaryAdjustmentCreateRequest request);
+    SalaryAdjustment update(UUID id, SalaryAdjustmentCreateRequest request);
     SalaryAdjustment upsertByPayrollPeriodAndEmployee(UUID payrollPeriodId, UUID employeeId, SalaryAdjustment payload);
     List<SalaryAdjustment> batchUpsertByPayrollPeriod(UUID payrollPeriodId, List<SalaryAdjustment> adjustments);
     Page<SalaryAdjustment> findAll(SalaryAdjustmentFilter filter, Pageable pageable);

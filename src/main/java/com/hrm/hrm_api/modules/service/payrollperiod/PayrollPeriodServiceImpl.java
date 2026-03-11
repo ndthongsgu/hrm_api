@@ -1,6 +1,7 @@
 package com.hrm.hrm_api.modules.service.payrollperiod;
 
 import com.hrm.hrm_api.common.exception.ResourceNotFoundException;
+import com.hrm.hrm_api.common.security.SecurityUtil;
 import com.hrm.hrm_api.modules.dto.base.PaginationResponse;
 import com.hrm.hrm_api.modules.dto.base.SelectOptionDto;
 import com.hrm.hrm_api.modules.dto.payrollperiod.PayrollPeriodFilter;
@@ -10,14 +11,11 @@ import com.hrm.hrm_api.modules.repository.*;
 import com.hrm.hrm_api.modules.util.ActionLogUtil;
 import org.springframework.stereotype.Service;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -28,7 +26,6 @@ public class PayrollPeriodServiceImpl implements PayrollPeriodService {
     private final PayrollPeriodRepository repository;
     private final EmployeeRepository employeeRepository;
     private final AttendanceSummaryRepository attendanceSummaryRepository;
-    private final DailyAttendanceRepository dailyAttendanceRepository;
     private final ContractRepository contractRepository;
     private final ContractAllowanceRepository contractAllowanceRepository;
     private final SalaryAdjustmentRepository salaryAdjustmentRepository;
@@ -37,6 +34,7 @@ public class PayrollPeriodServiceImpl implements PayrollPeriodService {
     private final InsuranceConfigRepository insuranceConfigRepository;
     private final TaxBracketRepository taxBracketRepository;
     private final ActionLogUtil actionLogUtil;
+    private final SecurityUtil securityUtil;
 
     public PayrollPeriodServiceImpl(
             PayrollPeriodRepository repository,
@@ -50,11 +48,11 @@ public class PayrollPeriodServiceImpl implements PayrollPeriodService {
             DependentRepository dependentRepository,
             InsuranceConfigRepository insuranceConfigRepository,
             TaxBracketRepository taxBracketRepository,
-            ActionLogUtil actionLogUtil) {
+            ActionLogUtil actionLogUtil,
+            SecurityUtil securityUtil) {
         this.repository = repository;
         this.employeeRepository = employeeRepository;
         this.attendanceSummaryRepository = attendanceSummaryRepository;
-        this.dailyAttendanceRepository = dailyAttendanceRepository;
         this.contractRepository = contractRepository;
         this.contractAllowanceRepository = contractAllowanceRepository;
         this.salaryAdjustmentRepository = salaryAdjustmentRepository;
@@ -63,6 +61,7 @@ public class PayrollPeriodServiceImpl implements PayrollPeriodService {
         this.insuranceConfigRepository = insuranceConfigRepository;
         this.taxBracketRepository = taxBracketRepository;
         this.actionLogUtil = actionLogUtil;
+        this.securityUtil = securityUtil;
     }
 
     @Override
@@ -80,7 +79,16 @@ public class PayrollPeriodServiceImpl implements PayrollPeriodService {
     public PayrollPeriod update(UUID id, PayrollPeriod entity) {
         findById(id);
         entity.setId(id);
-        return repository.save(entity);
+        PayrollPeriod updated = repository.save(entity);
+        
+        actionLogUtil.logUpdate(
+                id,
+                "PAYROLL_PERIOD",
+                "Cập nhật kỳ lương: " + updated.getName(),
+                securityUtil.getCurrentUsername()
+        );
+        
+        return updated;
     }
 
     @Override
@@ -154,6 +162,13 @@ public class PayrollPeriodServiceImpl implements PayrollPeriodService {
     public PayrollPeriod create(PayrollPeriod payrollPeriod) {
         // Lưu kỳ lương
         PayrollPeriod savedPeriod = repository.save(payrollPeriod);
+        
+        actionLogUtil.logCreate(
+                savedPeriod.getId(),
+                "PAYROLL_PERIOD",
+                "Tạo kỳ lương: " + savedPeriod.getName(),
+                securityUtil.getCurrentUsername()
+        );
         
         // Tự động tổng hợp công cho tất cả nhân viên
         summarizeAttendance(savedPeriod.getId());
@@ -409,6 +424,13 @@ public class PayrollPeriodServiceImpl implements PayrollPeriodService {
         
         period.setIsDeleted(true);
         repository.save(period);
+        
+        actionLogUtil.logDelete(
+                payrollPeriodId,
+                "PAYROLL_PERIOD",
+                "Ngừng hoạt động kỳ lương: " + period.getName(),
+                securityUtil.getCurrentUsername()
+        );
     }
 
     /**
@@ -421,6 +443,13 @@ public class PayrollPeriodServiceImpl implements PayrollPeriodService {
         
         period.setIsDeleted(false);
         repository.save(period);
+        
+        actionLogUtil.logActivate(
+                payrollPeriodId,
+                "PAYROLL_PERIOD",
+                "Kích hoạt lại kỳ lương: " + period.getName(),
+                securityUtil.getCurrentUsername()
+        );
     }
 }
 
