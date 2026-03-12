@@ -127,38 +127,6 @@ public class SalaryAdjustmentServiceImpl implements SalaryAdjustmentService {
     }
 
     @Override
-    @Transactional
-    public SalaryAdjustment upsertByPayrollPeriodAndEmployee(UUID payrollPeriodId, UUID employeeId,
-            SalaryAdjustment payload) {
-        List<SalaryAdjustment> existing = repository.findByPayrollPeriodIdAndEmployeeId(payrollPeriodId, employeeId);
-        if (!existing.isEmpty()) {
-            // Update the first one, assuming only one per employee per period
-            SalaryAdjustment adjustment = existing.get(0);
-            adjustment.setAmount(payload.getAmount());
-            adjustment.setType(payload.getType());
-            adjustment.setReason(payload.getReason());
-            adjustment.setIsTaxable(payload.getIsTaxable());
-            adjustment.setIsNetOnly(payload.getIsNetOnly());
-            return repository.save(adjustment);
-        } else {
-            // Create new
-            PayrollPeriod payrollPeriod = entityManager.find(PayrollPeriod.class, payrollPeriodId);
-            if (payrollPeriod == null) {
-                throw new ResourceNotFoundException(PayrollPeriod.class, payrollPeriodId);
-            }
-
-            Employee employee = entityManager.find(Employee.class, employeeId);
-            if (employee == null) {
-                throw new ResourceNotFoundException(Employee.class, employeeId);
-            }
-
-            payload.setPayrollPeriod(payrollPeriod);
-            payload.setEmployee(employee);
-            return repository.save(payload);
-        }
-    }
-
-    @Override
     public Page<SalaryAdjustment> findAll(Pageable pageable) {
         return findAll(null, pageable);
     }
@@ -179,6 +147,9 @@ public class SalaryAdjustmentServiceImpl implements SalaryAdjustmentService {
                 }
                 if (filter.getEmployeeId() != null) {
                     predicates = cb.and(predicates, cb.equal(root.get("employee").get("id"), filter.getEmployeeId()));
+                }
+                if (filter.getStatus() != null) {
+                    predicates = cb.and(predicates, cb.equal(root.get("status"), filter.getStatus()));
                 }
                 if (filter.getAmount() != null) {
                     predicates = cb.and(predicates, cb.equal(root.get("amount"), filter.getAmount()));
@@ -255,38 +226,55 @@ public class SalaryAdjustmentServiceImpl implements SalaryAdjustmentService {
                 securityUtil.getCurrentUsername());
     }
 
+    /**
+     * Duyệt điều chỉnh lương
+     */
     @Override
     @Transactional
-    public List<SalaryAdjustment> batchUpsertByPayrollPeriod(UUID payrollPeriodId, List<SalaryAdjustment> adjustments) {
-        PayrollPeriod payrollPeriod = entityManager.find(PayrollPeriod.class, payrollPeriodId);
-        if (payrollPeriod == null) {
-            throw new ResourceNotFoundException(PayrollPeriod.class, payrollPeriodId);
+    public void approve(UUID id) {
+        SalaryAdjustment adjustment = repository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(SalaryAdjustment.class, id));
+
+        // Kiểm tra đã lock chưa
+        if (PayrollPeriod.Status.LOCKED.equals(adjustment.getPayrollPeriod().getStatus())) {
+            throw new IllegalStateException("Kỳ lương đã bị khóa, không thể duyệt");
         }
 
-        return adjustments.stream().map(adjustment -> {
-            UUID employeeId = adjustment.getEmployee().getId();
-            List<SalaryAdjustment> existing = repository.findByPayrollPeriodIdAndEmployeeId(payrollPeriodId,
-                    employeeId);
-            if (!existing.isEmpty()) {
-                // Update existing
-                SalaryAdjustment existingAdjustment = existing.get(0);
-                existingAdjustment.setAmount(adjustment.getAmount());
-                existingAdjustment.setType(adjustment.getType());
-                existingAdjustment.setReason(adjustment.getReason());
-                existingAdjustment.setIsTaxable(adjustment.getIsTaxable());
-                existingAdjustment.setIsNetOnly(adjustment.getIsNetOnly());
-                return repository.save(existingAdjustment);
-            } else {
-                // Create new
-                Employee employee = entityManager.find(Employee.class, employeeId);
-                if (employee == null) {
-                    throw new ResourceNotFoundException(Employee.class, employeeId);
-                }
+        // Đánh dấu duyệt
+        adjustment.setStatus(SalaryAdjustment.Status.APPROVED);
 
-                adjustment.setPayrollPeriod(payrollPeriod);
-                adjustment.setEmployee(employee);
-                return repository.save(adjustment);
-            }
-        }).collect(Collectors.toList());
+        repository.save(adjustment);
+
+
+        actionLogUtil.logUpdate(
+                id,
+                "PAYROLL_PERIOD",
+                "Duyệt kỳ lương: " + adjustment.getPayrollPeriod().getName(),
+                securityUtil.getCurrentUsername());
+    }
+
+    /**
+     * Từ chối duyệt điều chỉnh lương
+     */
+    @Override
+    @Transactional
+    public void reject(UUID id, String reason) {
+        SalaryAdjustment adjustment = repository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(SalaryAdjustment.class, id));
+
+        // Không cho reject khi đã lock
+        if (SalaryAdjustment.Status.LOCKED.equals(adjustment.getStatus())) {
+            throw new IllegalStateException("Điều chỉnh lương đã bị khóa, không thể từ chối");
+        }
+
+        adjustment.setStatus(SalaryAdjustment.Status.REJECTED);
+
+        repository.save(adjustment);
+
+        actionLogUtil.logUpdate(
+                id,
+                "SALARY_ADJUSTMENT",
+                "Từ chối duyệt điều chỉnh lương: " + adjustment.getId() + " - Lý do: " + reason,
+                securityUtil.getCurrentUsername());
     }
 }

@@ -7,6 +7,7 @@ import com.hrm.hrm_api.modules.dto.base.SelectOptionDto;
 import com.hrm.hrm_api.modules.dto.payrollperiod.PayrollPeriodFilter;
 import com.hrm.hrm_api.modules.dto.request.PayrollPeriodSearchRequest;
 import com.hrm.hrm_api.modules.entity.*;
+import com.hrm.hrm_api.modules.entity.PayrollPeriod.Status;
 import com.hrm.hrm_api.modules.repository.*;
 import com.hrm.hrm_api.modules.util.ActionLogUtil;
 import org.springframework.stereotype.Service;
@@ -80,14 +81,13 @@ public class PayrollPeriodServiceImpl implements PayrollPeriodService {
         findById(id);
         entity.setId(id);
         PayrollPeriod updated = repository.save(entity);
-        
+
         actionLogUtil.logUpdate(
                 id,
                 "PAYROLL_PERIOD",
                 "Cập nhật kỳ lương: " + updated.getName(),
-                securityUtil.getCurrentUsername()
-        );
-        
+                securityUtil.getCurrentUsername());
+
         return updated;
     }
 
@@ -111,16 +111,18 @@ public class PayrollPeriodServiceImpl implements PayrollPeriodService {
 
             if (filter != null) {
                 if (filter.getName() != null && !filter.getName().isEmpty()) {
-                    predicates = cb.and(predicates, cb.like(cb.lower(root.get("name")), "%" + filter.getName().toLowerCase() + "%"));
+                    predicates = cb.and(predicates,
+                            cb.like(cb.lower(root.get("name")), "%" + filter.getName().toLowerCase() + "%"));
                 }
-                if (filter.getIsLocked() != null) {
-                    predicates = cb.and(predicates, cb.equal(root.get("isLocked"), filter.getIsLocked()));
+                if (filter.getStatus() != null) {
+                    predicates = cb.and(predicates, cb.equal(root.get("status"), filter.getStatus()));
                 }
                 if (filter.getIsDeleted() != null) {
                     predicates = cb.and(predicates, cb.equal(root.get("isDeleted"), filter.getIsDeleted()));
                 }
                 if (filter.getStartDate() != null) {
-                    predicates = cb.and(predicates, cb.greaterThanOrEqualTo(root.get("startDate"), filter.getStartDate()));
+                    predicates = cb.and(predicates,
+                            cb.greaterThanOrEqualTo(root.get("startDate"), filter.getStartDate()));
                 }
                 if (filter.getEndDate() != null) {
                     predicates = cb.and(predicates, cb.lessThanOrEqualTo(root.get("endDate"), filter.getEndDate()));
@@ -139,11 +141,10 @@ public class PayrollPeriodServiceImpl implements PayrollPeriodService {
         Page<PayrollPeriod> payrollPeriods = repository.findAll(buildSpec(filter), pageable);
 
         return PaginationResponse.of(
-            payrollPeriods.getContent(),
-            payrollPeriods.getTotalElements(),
-            payrollPeriods.getNumber(),
-            payrollPeriods.getSize()
-        );
+                payrollPeriods.getContent(),
+                payrollPeriods.getTotalElements(),
+                payrollPeriods.getNumber(),
+                payrollPeriods.getSize());
     }
 
     @Override
@@ -162,17 +163,16 @@ public class PayrollPeriodServiceImpl implements PayrollPeriodService {
     public PayrollPeriod create(PayrollPeriod payrollPeriod) {
         // Lưu kỳ lương
         PayrollPeriod savedPeriod = repository.save(payrollPeriod);
-        
+
         actionLogUtil.logCreate(
                 savedPeriod.getId(),
                 "PAYROLL_PERIOD",
                 "Tạo kỳ lương: " + savedPeriod.getName(),
-                securityUtil.getCurrentUsername()
-        );
-        
+                securityUtil.getCurrentUsername());
+
         // Tự động tổng hợp công cho tất cả nhân viên
         summarizeAttendance(savedPeriod.getId());
-        
+
         return savedPeriod;
     }
 
@@ -188,22 +188,23 @@ public class PayrollPeriodServiceImpl implements PayrollPeriodService {
     public void summarizeAttendance(UUID payrollPeriodId) {
         PayrollPeriod period = repository.findById(payrollPeriodId)
                 .orElseThrow(() -> new RuntimeException("PayrollPeriod not found"));
-        
+
         // Lấy tất cả nhân viên
         List<Employee> employees = employeeRepository.findAll();
-        
+
         for (Employee employee : employees) {
             // Kiểm tra đã có summary cho kỳ này chưa
-            if (attendanceSummaryRepository.findByPayrollPeriodAndEmployee(period.getId(), employee.getId()).isEmpty()) {
+            if (attendanceSummaryRepository.findByPayrollPeriodAndEmployee(period.getId(), employee.getId())
+                    .isEmpty()) {
                 // Tính tổng công từ DailyAttendance
                 float actualWorkingDays = 0;
                 float paidLeaveDays = 0;
                 float unpaidLeaveDays = 0;
                 float overtimeHours = 0;
-                
+
                 // TODO: Implement calculation logic từ daily_attendances trong kỳ
                 // Cần custom query trong DailyAttendanceRepository
-                
+
                 // Tạo AttendanceSummary
                 AttendanceSummary summary = new AttendanceSummary();
                 summary.setPayrollPeriod(period);
@@ -212,7 +213,7 @@ public class PayrollPeriodServiceImpl implements PayrollPeriodService {
                 summary.setPaidLeaveDays(paidLeaveDays);
                 summary.setUnpaidLeaveDays(unpaidLeaveDays);
                 summary.setOvertimeHours(overtimeHours);
-                
+
                 attendanceSummaryRepository.save(summary);
             }
         }
@@ -225,40 +226,42 @@ public class PayrollPeriodServiceImpl implements PayrollPeriodService {
     public void calculatePayslips(UUID payrollPeriodId) {
         PayrollPeriod period = repository.findById(payrollPeriodId)
                 .orElseThrow(() -> new RuntimeException("PayrollPeriod not found"));
-        
+
         List<Employee> employees = employeeRepository.findAll();
-        
+
         for (Employee employee : employees) {
             // Lấy công đã duyệt
             AttendanceSummary attendance = attendanceSummaryRepository
                     .findByPayrollPeriodAndEmployee(period.getId(), employee.getId())
                     .orElse(null);
-            
-            if (attendance == null) continue;
-            
+
+            if (attendance == null)
+                continue;
+
             // Kiểm tra công đã được duyệt
-            if (!attendance.getIsApproved()) {
+            if (!Status.APPROVED.equals(attendance.getStatus())) {
                 continue; // Bỏ qua nhân viên chưa được duyệt công
             }
-            
+
             // Lấy contract hiệu lực
             Contract contract = contractRepository.findByEmployeeAndStatus(employee.getId(), "ACTIVE")
                     .orElse(null);
-            
-            if (contract == null) continue;
-            
+
+            if (contract == null)
+                continue;
+
             // Tính lương
             Payslip payslip = calculatePayslip(employee, period, contract, attendance);
-            
-            // Upsert payslip (tìm xem có payslip cũ không, có thì update, không thì tạo mới)
+
+            // Upsert payslip (tìm xem có payslip cũ không, có thì update, không thì tạo
+            // mới)
             payslipRepository.findByPayrollPeriodAndEmployee(period.getId(), employee.getId())
                     .ifPresentOrElse(
                             existing -> {
                                 payslip.setId(existing.getId());
                                 payslipRepository.save(payslip);
                             },
-                            () -> payslipRepository.save(payslip)
-                    );
+                            () -> payslipRepository.save(payslip));
         }
     }
 
@@ -266,39 +269,39 @@ public class PayrollPeriodServiceImpl implements PayrollPeriodService {
      * Tính chi tiết lương cho một nhân viên
      */
     private Payslip calculatePayslip(Employee employee, PayrollPeriod period,
-                                     Contract contract, AttendanceSummary attendance) {
+            Contract contract, AttendanceSummary attendance) {
         Payslip payslip = new Payslip();
         payslip.setPayrollPeriod(period);
         payslip.setEmployee(employee);
         payslip.setContract(contract);
-        
+
         // 1. Tính thu nhập
         BigDecimal grossSalary = calculateGrossSalary(contract, period, attendance);
         payslip.setGrossSalary(grossSalary);
-        
+
         // Lương theo ngày công
         BigDecimal salaryByWorkdays = grossSalary
                 .multiply(BigDecimal.valueOf(attendance.getActualWorkingDays()))
                 .divide(BigDecimal.valueOf(period.getStandardWorkingDays()), 2, BigDecimal.ROUND_HALF_UP);
         payslip.setSalaryByWorkdays(salaryByWorkdays);
-        
+
         // Tính phụ cấp
         BigDecimal totalAllowance = calculateTotalAllowance(contract);
         payslip.setTotalAllowance(totalAllowance);
-        
+
         // Điều chỉnh (bonus/fine)
         BigDecimal totalBonus = calculateTotalAdjustments(employee, period);
         payslip.setTotalBonus(totalBonus);
-        
+
         // Income trước bảo hiểm = từng mục + phụ cấp + điều chỉnh
         BigDecimal incomeBeforeInsurance = salaryByWorkdays.add(totalAllowance).add(totalBonus);
-        
+
         // 2. Tính bảo hiểm
         calculateInsurance(payslip, incomeBeforeInsurance, contract, employee);
-        
+
         // 3. Tính thuế
         calculateTax(payslip, salaryByWorkdays, employee);
-        
+
         // 4. Tính net
         BigDecimal netSalary = incomeBeforeInsurance
                 .subtract(payslip.getBhxhAmount() != null ? payslip.getBhxhAmount() : BigDecimal.ZERO)
@@ -306,12 +309,12 @@ public class PayrollPeriodServiceImpl implements PayrollPeriodService {
                 .subtract(payslip.getBhtnAmount() != null ? payslip.getBhtnAmount() : BigDecimal.ZERO)
                 .subtract(payslip.getTaxAmount() != null ? payslip.getTaxAmount() : BigDecimal.ZERO);
         payslip.setNetSalary(netSalary);
-        
+
         return payslip;
     }
 
-    private BigDecimal calculateGrossSalary(Contract contract, PayrollPeriod period, 
-                                           AttendanceSummary attendance) {
+    private BigDecimal calculateGrossSalary(Contract contract, PayrollPeriod period,
+            AttendanceSummary attendance) {
         // Nếu lương net, cần convert sang gross
         if (contract.getIsNet() != null && contract.getIsNet()) {
             // TODO: Implement net to gross conversion
@@ -330,7 +333,7 @@ public class PayrollPeriodServiceImpl implements PayrollPeriodService {
     private BigDecimal calculateTotalAdjustments(Employee employee, PayrollPeriod period) {
         List<SalaryAdjustment> adjustments = salaryAdjustmentRepository
                 .findByEmployeeAndPayrollPeriod(employee.getId(), period.getId());
-        
+
         BigDecimal total = BigDecimal.ZERO;
         for (SalaryAdjustment adj : adjustments) {
             if ("FINE".equals(adj.getType())) {
@@ -344,11 +347,11 @@ public class PayrollPeriodServiceImpl implements PayrollPeriodService {
 
     private void calculateInsurance(Payslip payslip, BigDecimal salaryBase, Contract contract, Employee employee) {
         List<InsuranceConfig> configs = insuranceConfigRepository.findAll();
-        
+
         for (InsuranceConfig config : configs) {
             BigDecimal rate = new BigDecimal(config.getEmployeeRate().toString());
             BigDecimal amount = salaryBase.multiply(rate).divide(BigDecimal.valueOf(100), 2, BigDecimal.ROUND_HALF_UP);
-            
+
             if ("SOCIAL".equals(config.getType())) {
                 payslip.setBhxhSalaryBase(salaryBase);
                 payslip.setBhxhAmount(amount);
@@ -363,22 +366,22 @@ public class PayrollPeriodServiceImpl implements PayrollPeriodService {
     private void calculateTax(Payslip payslip, BigDecimal salaryByWorkdays, Employee employee) {
         BigDecimal taxableIncome = salaryByWorkdays;
         payslip.setTaxableIncome(taxableIncome);
-        
+
         // Khấu trừ cá nhân
         BigDecimal deductionPersonal = BigDecimal.valueOf(11000000); // Theo luật hiện hành
         payslip.setDeductionPersonal(deductionPersonal);
-        
+
         // Khấu trừ người phụ thuộc
         List<Dependent> dependents = dependentRepository.findByEmployeeAndIsQualified(employee.getId(), true);
         BigDecimal deductionDependents = BigDecimal.valueOf(4400000).multiply(BigDecimal.valueOf(dependents.size()));
         payslip.setDeductionDependents(deductionDependents);
-        
+
         BigDecimal assessableIncome = taxableIncome.subtract(deductionPersonal).subtract(deductionDependents);
         if (assessableIncome.compareTo(BigDecimal.ZERO) < 0) {
             assessableIncome = BigDecimal.ZERO;
         }
         payslip.setAssessableIncome(assessableIncome);
-        
+
         // Áp dụng bảng lũy tiến khấu trừ
         BigDecimal taxAmount = calculateProgressiveTax(assessableIncome);
         payslip.setTaxAmount(taxAmount);
@@ -386,7 +389,7 @@ public class PayrollPeriodServiceImpl implements PayrollPeriodService {
 
     private BigDecimal calculateProgressiveTax(BigDecimal income) {
         List<TaxBracket> brackets = taxBracketRepository.findByIsActive(true);
-        
+
         BigDecimal tax = BigDecimal.ZERO;
         for (TaxBracket bracket : brackets) {
             if (income.compareTo(bracket.getMinIncome()) >= 0) {
@@ -398,7 +401,7 @@ public class PayrollPeriodServiceImpl implements PayrollPeriodService {
                 tax = tax.add(bracketTax);
             }
         }
-        
+
         return tax.compareTo(BigDecimal.ZERO) < 0 ? BigDecimal.ZERO : tax;
     }
 
@@ -406,11 +409,11 @@ public class PayrollPeriodServiceImpl implements PayrollPeriodService {
      * Bước 4: Chốt/Lock kỳ lương
      */
     @Transactional
-    public void lockPeriod(UUID payrollPeriodId) {
+    public void lock(UUID payrollPeriodId) {
         PayrollPeriod period = repository.findById(payrollPeriodId)
                 .orElseThrow(() -> new RuntimeException("PayrollPeriod not found"));
-        
-        period.setIsLocked(true);
+
+        period.setStatus(PayrollPeriod.Status.LOCKED);
         repository.save(period);
     }
 
@@ -421,16 +424,15 @@ public class PayrollPeriodServiceImpl implements PayrollPeriodService {
     public void deactivate(UUID payrollPeriodId) {
         PayrollPeriod period = repository.findById(payrollPeriodId)
                 .orElseThrow(() -> new RuntimeException("PayrollPeriod not found"));
-        
-        period.setIsDeleted(true);
+
+        period.setStatus(PayrollPeriod.Status.REJECTED);
         repository.save(period);
-        
+
         actionLogUtil.logDelete(
                 payrollPeriodId,
                 "PAYROLL_PERIOD",
                 "Ngừng hoạt động kỳ lương: " + period.getName(),
-                securityUtil.getCurrentUsername()
-        );
+                securityUtil.getCurrentUsername());
     }
 
     /**
@@ -440,16 +442,69 @@ public class PayrollPeriodServiceImpl implements PayrollPeriodService {
     public void activate(UUID payrollPeriodId) {
         PayrollPeriod period = repository.findById(payrollPeriodId)
                 .orElseThrow(() -> new RuntimeException("PayrollPeriod not found"));
-        
+
         period.setIsDeleted(false);
         repository.save(period);
-        
+
         actionLogUtil.logActivate(
                 payrollPeriodId,
                 "PAYROLL_PERIOD",
                 "Kích hoạt lại kỳ lương: " + period.getName(),
-                securityUtil.getCurrentUsername()
-        );
+                securityUtil.getCurrentUsername());
+    }
+
+    /**
+     * Duyệt kỳ lương
+     */
+    @Override
+    @Transactional
+    public void approve(UUID id) {
+        PayrollPeriod period = repository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(PayrollPeriod.class, id));
+
+        // Kiểm tra đã lock chưa
+        if (PayrollPeriod.Status.LOCKED.equals(period.getStatus())) {
+            throw new IllegalStateException("Kỳ lương đã bị khóa, không thể duyệt");
+        }
+
+        // Đánh dấu duyệt
+        period.setStatus(PayrollPeriod.Status.APPROVED);
+
+        repository.save(period);
+
+        // Tính bảng lương
+        calculatePayslips(id);
+
+        actionLogUtil.logUpdate(
+                id,
+                "PAYROLL_PERIOD",
+                "Duyệt kỳ lương: " + period.getName(),
+                securityUtil.getCurrentUsername());
+    }
+
+    /**
+     * Từ chối duyệt kỳ lương
+     */
+    @Override
+    @Transactional
+    public void reject(UUID id, String reason) {
+        PayrollPeriod period = repository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(PayrollPeriod.class, id));
+
+        // Không cho reject khi đã lock
+        if (PayrollPeriod.Status.LOCKED.equals(period.getStatus())) {
+            throw new IllegalStateException("Kỳ lương đã bị khóa, không thể từ chối");
+        }
+
+        period.setStatus(PayrollPeriod.Status.REJECTED);
+
+        repository.save(period);
+
+        actionLogUtil.logUpdate(
+                id,
+                "PAYROLL_PERIOD",
+                "Từ chối duyệt kỳ lương: " + period.getName() +
+                        (reason != null ? " - Lý do: " + reason : ""),
+                securityUtil.getCurrentUsername());
     }
 }
-

@@ -26,5 +26,10 @@ public class AttendanceSummary extends BaseEntity {
     private Float unpaidLeaveDays;
     private Float overtimeHours;
     
-    private Boolean isApproved = false;
+    private Status status = Status.PENDING; // e.g., "APPROVED", "REJECTED", "PENDING", "LOCKED"
+    private String reason;
+
+    public enum Status {
+        APPROVED, REJECTED, PENDING, LOCKED
+    }
 }

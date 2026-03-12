@@ -7,6 +7,9 @@ public enum PermissionDefinition {
     DELETE("DELETE", "Xóa", "Cho phép xóa bản ghi"),
     ACTIVATE("ACTIVATE", "Kích hoạt", "Cho phép kích hoạt bản ghi"),
     DEACTIVATE("DEACTIVATE", "Hủy kích hoạt", "Cho phép hủy kích hoạt bản ghi"),
+    APPROVE("APPROVE", "Duyệt", "Cho phép duyệt bản ghi"),
+    REJECT("REJECT", "Từ chối", "Cho phép từ chối bản ghi"),
+    LOCK("LOCK", "Khóa", "Cho phép khóa bản ghi"),
     IMPORT("IMPORT", "Nhập khẩu", "Cho phép import dữ liệu"),
     EXPORT("EXPORT", "Xuất khẩu", "Cho phép xuất dữ liệu");
 

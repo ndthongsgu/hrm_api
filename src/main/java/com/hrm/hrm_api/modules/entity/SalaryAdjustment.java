@@ -33,4 +33,10 @@ public class SalaryAdjustment extends BaseEntity {
     private Boolean isTaxable = true;
 
     private Boolean isNetOnly = false;
+
+    private Status status = Status.PENDING; // e.g., "APPROVED", "REJECTED", "PENDING", "LOCKED"
+
+    public enum Status {
+        APPROVED, REJECTED, PENDING, LOCKED
+    }
 }

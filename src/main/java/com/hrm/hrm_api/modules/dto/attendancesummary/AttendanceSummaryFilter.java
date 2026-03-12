@@ -8,6 +8,6 @@ import java.util.UUID;
 public class AttendanceSummaryFilter {
     private UUID payrollPeriodId;
     private UUID employeeId;
-    private Boolean isApproved;
+    private String status; // APPROVED, REJECTED, PENDING, LOCKED;
     private Boolean isDeleted;
 }

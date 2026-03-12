@@ -13,14 +13,13 @@ import java.util.UUID;
 public interface AttendanceSummaryService {
     Page<AttendanceSummary> findAll(Pageable pageable);
     AttendanceSummary findById(UUID id);
-    AttendanceSummary create(AttendanceSummary entity);
-    AttendanceSummary update(UUID id, AttendanceSummary entity);
     void delete(UUID id);
-    AttendanceSummary createFromRequest(AttendanceSummaryCreateRequest request);
-    AttendanceSummary updateFromRequest(UUID id, AttendanceSummaryCreateRequest request);
+    AttendanceSummary create(AttendanceSummaryCreateRequest request);
+    AttendanceSummary update(UUID id, AttendanceSummaryCreateRequest request);
     Page<AttendanceSummary> findAll(AttendanceSummaryFilter filter, Pageable pageable);
     PaginationResponse<AttendanceSummary> search(AttendanceSummarySearchRequest request, Pageable pageable);
-    void approveAttendance(UUID attendanceSummaryId);
     void deactivate(UUID id);
     void activate(UUID id);
+    void approve(UUID id);
+    void reject(UUID id, String reason);
 }

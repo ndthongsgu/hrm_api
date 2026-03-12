@@ -49,6 +49,7 @@ public class PayrollPeriodController {
     }
 
     @PostMapping("/create")
+    @RequirePermission(module = "PAYROLL", action = PermissionDefinition.CREATE)
     public ResponseEntity<BaseResponse<PayrollPeriod>> create(@Valid @RequestBody PayrollPeriod payload) {
         PayrollPeriod created = service.create(payload);
         return ResponseEntity.ok(BaseResponse.ok(created));
@@ -71,6 +72,7 @@ public class PayrollPeriodController {
      * Kích hoạt lại kỳ lương (Soft delete recovery)
      */
     @PutMapping("/{id}/activate")
+    @RequirePermission(module = "PAYROLL", action = PermissionDefinition.ACTIVATE)
     public ResponseEntity<BaseResponse<String>> activate(@PathVariable UUID id) {
         service.activate(id);
         return ResponseEntity.ok(BaseResponse.ok("Kích hoạt lại kỳ lương thành công"));
@@ -80,6 +82,7 @@ public class PayrollPeriodController {
      * Bước 1: Tự động tổng hợp công
      */
     @PostMapping("/{id}/summarize-attendance")
+    @RequirePermission(module = "PAYROLL", action = PermissionDefinition.UPDATE)
     public ResponseEntity<BaseResponse<String>> summarizeAttendance(@PathVariable UUID id) {
         service.summarizeAttendance(id);
         return ResponseEntity.ok(BaseResponse.ok("Tổng hợp công thành công"));
@@ -89,6 +92,7 @@ public class PayrollPeriodController {
      * Bước 3: Tính lương
      */
     @PostMapping("/{id}/calculate-payslips")
+    @RequirePermission(module = "PAYROLL", action = PermissionDefinition.UPDATE)
     public ResponseEntity<BaseResponse<String>> calculatePayslips(@PathVariable UUID id) {
         service.calculatePayslips(id);
         return ResponseEntity.ok(BaseResponse.ok("Tính lương thành công"));
@@ -98,8 +102,29 @@ public class PayrollPeriodController {
      * Bước 4: Chốt kỳ lương (Lock)
      */
     @PostMapping("/{id}/lock")
+    @RequirePermission(module = "PAYROLL", action = PermissionDefinition.LOCK)
     public ResponseEntity<BaseResponse<String>> lockPeriod(@PathVariable UUID id) {
-        service.lockPeriod(id);
+        service.lock(id);
         return ResponseEntity.ok(BaseResponse.ok("Chốt kỳ lương thành công"));
+    }
+
+    /**
+     * Duyệt kỳ lương
+     */
+    @PostMapping("/{id}/approve")
+    @RequirePermission(module = "PAYROLL", action = PermissionDefinition.APPROVE)
+    public ResponseEntity<BaseResponse<String>> approvePeriod(@PathVariable UUID id) {
+        service.approve(id);
+        return ResponseEntity.ok(BaseResponse.ok("Duyệt kỳ lương thành công"));
+    }
+
+    /**
+     * Từ chối duyệt kỳ lương
+     */
+    @PostMapping("/{id}/reject")
+    @RequirePermission(module = "PAYROLL", action = PermissionDefinition.REJECT)
+    public ResponseEntity<BaseResponse<String>> rejectPeriod(@PathVariable UUID id, @RequestParam(required = false) String reason) {
+        service.reject(id, reason);
+        return ResponseEntity.ok(BaseResponse.ok("Từ chối duyệt kỳ lương thành công"));
     }
 }

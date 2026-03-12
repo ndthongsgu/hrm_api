@@ -4,10 +4,8 @@ import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
-import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "payroll_periods")
@@ -24,5 +22,9 @@ public class PayrollPeriod extends BaseEntity {
 
     private Float standardWorkingDays;
 
-    private Boolean isLocked = false;
+    private Status status = Status.PENDING; // e.g., "APPROVED", "REJECTED", "PENDING", "LOCKED"
+
+    public enum Status {
+        APPROVED, REJECTED, PENDING, LOCKED
+    }
 }

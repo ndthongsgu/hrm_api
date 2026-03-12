@@ -22,7 +22,9 @@ public interface PayrollPeriodService {
     List<SelectOptionDto> getSelectOptions();
     void summarizeAttendance(UUID payrollPeriodId);
     void calculatePayslips(UUID payrollPeriodId);
-    void lockPeriod(UUID payrollPeriodId);
-    void deactivate(UUID payrollPeriodId);
     void activate(UUID payrollPeriodId);
+    void deactivate(UUID payrollPeriodId);
+    void lock(UUID payrollPeriodId);
+    void approve(UUID id);
+    void reject(UUID id, String reason);
 }

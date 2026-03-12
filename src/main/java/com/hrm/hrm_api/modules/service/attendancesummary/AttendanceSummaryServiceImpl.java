@@ -1,6 +1,7 @@
 package com.hrm.hrm_api.modules.service.attendancesummary;
 
 import com.hrm.hrm_api.common.exception.ResourceNotFoundException;
+import com.hrm.hrm_api.common.security.SecurityUtil;
 import com.hrm.hrm_api.modules.dto.attendancesummary.AttendanceSummaryFilter;
 import com.hrm.hrm_api.modules.dto.base.PaginationResponse;
 import com.hrm.hrm_api.modules.dto.request.AttendanceSummaryCreateRequest;
@@ -9,6 +10,8 @@ import com.hrm.hrm_api.modules.entity.AttendanceSummary;
 import com.hrm.hrm_api.modules.entity.Employee;
 import com.hrm.hrm_api.modules.entity.PayrollPeriod;
 import com.hrm.hrm_api.modules.repository.AttendanceSummaryRepository;
+import com.hrm.hrm_api.modules.util.ActionLogUtil;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -21,9 +24,13 @@ import java.util.UUID;
 public class AttendanceSummaryServiceImpl implements AttendanceSummaryService {
 
     private final AttendanceSummaryRepository repository;
+    private final ActionLogUtil actionLogUtil;
+    private final SecurityUtil securityUtil;
 
-    public AttendanceSummaryServiceImpl(AttendanceSummaryRepository repository) {
+    public AttendanceSummaryServiceImpl(AttendanceSummaryRepository repository, ActionLogUtil actionLogUtil, SecurityUtil securityUtil) {
         this.repository = repository;
+        this.actionLogUtil = actionLogUtil;
+        this.securityUtil = securityUtil;
     }
 
     @Override
@@ -33,30 +40,22 @@ public class AttendanceSummaryServiceImpl implements AttendanceSummaryService {
 
     @Override
     @Transactional
-    public AttendanceSummary create(AttendanceSummary entity) {
-        return repository.save(entity);
-    }
-
-    @Override
-    @Transactional
-    public AttendanceSummary update(UUID id, AttendanceSummary entity) {
-        findById(id);
-        entity.setId(id);
-        return repository.save(entity);
-    }
-
-    @Override
-    @Transactional
     public void delete(UUID id) {
         if (!repository.existsById(id)) {
             throw new ResourceNotFoundException(AttendanceSummary.class, id);
         }
+        actionLogUtil.logDelete(
+                id,
+                "ATTENDANCE_SUMMARY",
+                "Xóa tổng hợp chấm công: " + id,
+                securityUtil.getCurrentUsername()
+        );
         repository.deleteById(id);
     }
 
     @Override
     @Transactional
-    public AttendanceSummary createFromRequest(AttendanceSummaryCreateRequest request) {
+    public AttendanceSummary create(AttendanceSummaryCreateRequest request) {
         PayrollPeriod payrollPeriod = new PayrollPeriod();
         payrollPeriod.setId(request.getPayrollPeriodId());
 
@@ -70,13 +69,12 @@ public class AttendanceSummaryServiceImpl implements AttendanceSummaryService {
         entity.setPaidLeaveDays(request.getPaidLeaveDays());
         entity.setUnpaidLeaveDays(request.getUnpaidLeaveDays());
         entity.setOvertimeHours(request.getOvertimeHours());
-        entity.setIsApproved(request.getIsApproved());
         return repository.save(entity);
     }
 
     @Override
     @Transactional
-    public AttendanceSummary updateFromRequest(UUID id, AttendanceSummaryCreateRequest request) {
+    public AttendanceSummary update(UUID id, AttendanceSummaryCreateRequest request) {
         AttendanceSummary entity = findById(id);
 
         PayrollPeriod payrollPeriod = new PayrollPeriod();
@@ -91,7 +89,6 @@ public class AttendanceSummaryServiceImpl implements AttendanceSummaryService {
         entity.setPaidLeaveDays(request.getPaidLeaveDays());
         entity.setUnpaidLeaveDays(request.getUnpaidLeaveDays());
         entity.setOvertimeHours(request.getOvertimeHours());
-        entity.setIsApproved(request.getIsApproved());
         return repository.save(entity);
     }
 
@@ -116,11 +113,11 @@ public class AttendanceSummaryServiceImpl implements AttendanceSummaryService {
                 if (filter.getEmployeeId() != null) {
                     predicates = cb.and(predicates, cb.equal(root.get("employee").get("id"), filter.getEmployeeId()));
                 }
-                if (filter.getIsApproved() != null) {
-                    predicates = cb.and(predicates, cb.equal(root.get("isApproved"), filter.getIsApproved()));
-                }
                 if (filter.getIsDeleted() != null) {
                     predicates = cb.and(predicates, cb.equal(root.get("isDeleted"), filter.getIsDeleted()));
+                }
+                if (filter.getStatus() != null) {
+                    predicates = cb.and(predicates, cb.equal(root.get("status"), filter.getStatus()));
                 }
             }
 
@@ -143,16 +140,55 @@ public class AttendanceSummaryServiceImpl implements AttendanceSummaryService {
     }
 
     /**
-     * Duyệt công - đóng băng công cho kỳ (Bước 2)
+     * Duyệt điều chỉnh lương
      */
     @Override
     @Transactional
-    public void approveAttendance(UUID attendanceSummaryId) {
-        AttendanceSummary summary = repository.findById(attendanceSummaryId)
-                .orElseThrow(() -> new RuntimeException("AttendanceSummary not found"));
-        
-        summary.setIsApproved(true);
-        repository.save(summary);
+    public void approve(UUID id) {
+        AttendanceSummary attendanceSummary = repository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(AttendanceSummary.class, id));
+
+        // Kiểm tra đã lock chưa
+        if (PayrollPeriod.Status.LOCKED.equals(attendanceSummary.getPayrollPeriod().getStatus())) {
+            throw new IllegalStateException("Kỳ lương đã bị khóa, không thể duyệt");
+        }
+
+        // Đánh dấu duyệt
+        attendanceSummary.setStatus(AttendanceSummary.Status.APPROVED);
+
+        repository.save(attendanceSummary);
+
+
+        actionLogUtil.logUpdate(
+                id,
+                "ATTENDANCE_SUMMARY",
+                "Duyệt công: " + attendanceSummary.getPayrollPeriod().getName(),
+                securityUtil.getCurrentUsername());
+    }
+
+    /**
+     * Từ chối duyệt điều chỉnh lương
+     */
+    @Override
+    @Transactional
+    public void reject(UUID id, String reason) {
+        AttendanceSummary attendanceSummary = repository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(AttendanceSummary.class, id));
+
+        // Không cho reject khi đã lock
+        if (AttendanceSummary.Status.LOCKED.equals(attendanceSummary.getStatus())) {
+            throw new IllegalStateException("Kỳ lương đã bị khóa, không thể từ chối");
+        }
+
+        attendanceSummary.setStatus(AttendanceSummary.Status.REJECTED);
+
+        repository.save(attendanceSummary);
+
+        actionLogUtil.logUpdate(
+                id,
+                "ATTENDANCE_SUMMARY",
+                "Từ chối duyệt công: " + attendanceSummary.getId() + " - Lý do: " + reason,
+                securityUtil.getCurrentUsername());
     }
 
     @Override

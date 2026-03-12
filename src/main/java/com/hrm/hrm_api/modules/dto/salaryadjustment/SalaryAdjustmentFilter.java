@@ -15,4 +15,5 @@ public class SalaryAdjustmentFilter {
     private Boolean isTaxable;
     private Boolean isNetOnly;
     private Boolean isDeleted;
+    private String status; // APPROVED, REJECTED, PENDING, LOCKED;
 }
