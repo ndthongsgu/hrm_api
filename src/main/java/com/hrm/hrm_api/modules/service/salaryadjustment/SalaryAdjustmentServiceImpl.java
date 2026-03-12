@@ -18,9 +18,7 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 @Service
 public class SalaryAdjustmentServiceImpl implements SalaryAdjustmentService {
@@ -87,7 +85,7 @@ public class SalaryAdjustmentServiceImpl implements SalaryAdjustmentService {
                     "Tạo điều chỉnh lương",
                     securityUtil.getCurrentUsername());
         } catch (Exception e) {
-            // log nếu cần, tránh làm fail nghiệp vụ chính
+            throw new RuntimeException("Lỗi khi ghi log hành động: " + e.getMessage(), e);
         }
 
         return saved;

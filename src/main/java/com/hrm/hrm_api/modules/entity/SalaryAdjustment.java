@@ -26,7 +26,7 @@ public class SalaryAdjustment extends BaseEntity {
     @Column(precision = 15, scale = 2)
     private BigDecimal amount;
 
-    private String type; // BONUS, FINE, ADVANCE, BHXH_BENEFIT
+    private Type type;
 
     private String reason;
 
@@ -38,5 +38,9 @@ public class SalaryAdjustment extends BaseEntity {
 
     public enum Status {
         APPROVED, REJECTED, PENDING, LOCKED
+    }
+
+    public enum Type {
+        BONUS, FINE, ADVANCE, BHXH_BENEFIT,
     }
 }

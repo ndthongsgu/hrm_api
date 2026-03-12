@@ -300,7 +300,7 @@ public class PayslipServiceImpl implements PayslipService {
 
     private BigDecimal sumByType(List<SalaryAdjustment> adjustments, String type) {
         return adjustments.stream()
-                .filter(a -> type.equalsIgnoreCase(a.getType()))
+                .filter(a -> type.equals(a.getType()))
                 .map(a -> nvl(a.getAmount()))
                 .reduce(ZERO, BigDecimal::add);
     }

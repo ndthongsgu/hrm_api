@@ -215,6 +215,13 @@ public class PayrollPeriodServiceImpl implements PayrollPeriodService {
                 summary.setOvertimeHours(overtimeHours);
 
                 attendanceSummaryRepository.save(summary);
+
+                // Lưu log hành động
+                actionLogUtil.logCreate(
+                        summary.getId(),
+                        "ATTENDANCE_SUMMARY",
+                        "Tạo tổng hợp công cho nhân viên: " + employee.getFullName() + " - Kỳ lương: " + period.getName(),
+                        securityUtil.getCurrentUsername());
             }
         }
     }

@@ -5,6 +5,7 @@ import lombok.Data;
 
 import java.math.BigDecimal;
 import java.util.UUID;
+import com.hrm.hrm_api.modules.entity.SalaryAdjustment;
 
 @Data
 public class SalaryAdjustmentCreateRequest {
@@ -18,7 +19,7 @@ public class SalaryAdjustmentCreateRequest {
     private BigDecimal amount;
 
     @NotNull
-    private String type;
+    private SalaryAdjustment.Type type;
 
     private String reason;
 
