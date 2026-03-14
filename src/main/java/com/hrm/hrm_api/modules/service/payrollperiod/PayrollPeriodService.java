@@ -21,7 +21,6 @@ public interface PayrollPeriodService {
     PaginationResponse<PayrollPeriod> search(PayrollPeriodSearchRequest request, Pageable pageable);
     List<SelectOptionDto> getSelectOptions();
     void summarizeAttendance(UUID payrollPeriodId);
-    void calculatePayslips(UUID payrollPeriodId);
     void activate(UUID payrollPeriodId);
     void deactivate(UUID payrollPeriodId);
     void lock(UUID payrollPeriodId);

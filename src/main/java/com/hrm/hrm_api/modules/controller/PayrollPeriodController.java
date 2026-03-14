@@ -89,16 +89,6 @@ public class PayrollPeriodController {
     }
 
     /**
-     * Bước 3: Tính lương
-     */
-    @PostMapping("/{id}/calculate-payslips")
-    @RequirePermission(module = "PAYROLL", action = PermissionDefinition.UPDATE)
-    public ResponseEntity<BaseResponse<String>> calculatePayslips(@PathVariable UUID id) {
-        service.calculatePayslips(id);
-        return ResponseEntity.ok(BaseResponse.ok("Tính lương thành công"));
-    }
-
-    /**
      * Bước 4: Chốt kỳ lương (Lock)
      */
     @PostMapping("/{id}/lock")

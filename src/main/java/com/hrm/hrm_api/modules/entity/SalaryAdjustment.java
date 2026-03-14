@@ -26,6 +26,7 @@ public class SalaryAdjustment extends BaseEntity {
     @Column(precision = 15, scale = 2)
     private BigDecimal amount;
 
+    @Enumerated(EnumType.STRING)
     private Type type;
 
     private String reason;
@@ -34,10 +35,11 @@ public class SalaryAdjustment extends BaseEntity {
 
     private Boolean isNetOnly = false;
 
+    @Enumerated(EnumType.STRING)
     private Status status = Status.PENDING; // e.g., "APPROVED", "REJECTED", "PENDING", "LOCKED"
 
     public enum Status {
-        APPROVED, REJECTED, PENDING, LOCKED
+        APPROVED, PENDING, LOCKED
     }
 
     public enum Type {

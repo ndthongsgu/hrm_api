@@ -26,10 +26,11 @@ public class AttendanceSummary extends BaseEntity {
     private Float unpaidLeaveDays;
     private Float overtimeHours;
     
+    @Enumerated(EnumType.STRING)
     private Status status = Status.PENDING; // e.g., "APPROVED", "REJECTED", "PENDING", "LOCKED"
     private String reason;
 
     public enum Status {
-        APPROVED, REJECTED, PENDING, LOCKED
+        APPROVED, PENDING, LOCKED
     }
 }

@@ -77,4 +77,13 @@ public class Payslip extends BaseEntity {
     // 4. Net
     @Column(precision = 15, scale = 2)
     private BigDecimal netSalary;
+
+    @Enumerated(EnumType.STRING)
+    private Status status = Status.PENDING; // e.g., "APPROVED", "REJECTED", "PENDING", "LOCKED"
+
+    public enum Status {
+        APPROVED, PENDING
+    }
+
+    private String reason;
 }

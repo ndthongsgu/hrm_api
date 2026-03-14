@@ -9,9 +9,15 @@ import java.util.UUID;
 
 public interface PayslipService {
 	Page<Payslip> findAll(Pageable pageable);
+	Page<Payslip> search(java.util.Map<String, Object> filters, Pageable pageable);
 	Payslip findById(UUID id);
 	Payslip create(Payslip entity);
 	Payslip update(UUID id, Payslip entity);
 	void delete(UUID id);
+	void deactivate(UUID id);
+	void activate(UUID id);
+	void approve(UUID id);
+	void reject(UUID id, String reason);
 	List<Payslip> generateForPayrollPeriod(UUID payrollPeriodId);
+	Payslip generateForEmployee(UUID payrollPeriodId, UUID employeeId);
 }
