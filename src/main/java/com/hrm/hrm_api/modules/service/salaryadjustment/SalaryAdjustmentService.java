@@ -20,6 +20,5 @@ public interface SalaryAdjustmentService {
     PaginationResponse<SalaryAdjustment> search(SalaryAdjustmentSearchRequest request, Pageable pageable);
     void deactivate(UUID id);
     void activate(UUID id);
-    void reject(UUID id, String reason);
     void approve(UUID id);
 }

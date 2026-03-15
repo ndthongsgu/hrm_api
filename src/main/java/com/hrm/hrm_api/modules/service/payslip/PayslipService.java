@@ -17,7 +17,6 @@ public interface PayslipService {
 	void deactivate(UUID id);
 	void activate(UUID id);
 	void approve(UUID id);
-	void reject(UUID id, String reason);
 	List<Payslip> generateForPayrollPeriod(UUID payrollPeriodId);
 	Payslip generateForEmployee(UUID payrollPeriodId, UUID employeeId);
 }

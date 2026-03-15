@@ -21,5 +21,4 @@ public interface AttendanceSummaryService {
     void deactivate(UUID id);
     void activate(UUID id);
     void approve(UUID id);
-    void reject(UUID id, String reason);
 }

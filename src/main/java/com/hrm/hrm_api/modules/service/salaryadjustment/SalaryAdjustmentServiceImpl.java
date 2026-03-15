@@ -72,7 +72,6 @@ public class SalaryAdjustmentServiceImpl implements SalaryAdjustmentService {
         entity.setEmployee(employee);
         entity.setAmount(request.getAmount());
         entity.setType(request.getType());
-        entity.setReason(request.getReason());
         entity.setIsTaxable(request.getIsTaxable());
         entity.setIsNetOnly(request.getIsNetOnly());
 
@@ -110,7 +109,6 @@ public class SalaryAdjustmentServiceImpl implements SalaryAdjustmentService {
         entity.setEmployee(employee);
         entity.setAmount(request.getAmount());
         entity.setType(request.getType());
-        entity.setReason(request.getReason());
         entity.setIsTaxable(request.getIsTaxable());
         entity.setIsNetOnly(request.getIsNetOnly());
         SalaryAdjustment updated = repository.save(entity);
@@ -154,9 +152,6 @@ public class SalaryAdjustmentServiceImpl implements SalaryAdjustmentService {
                 }
                 if (filter.getType() != null) {
                     predicates = cb.and(predicates, cb.equal(root.get("type"), filter.getType()));
-                }
-                if (filter.getReason() != null) {
-                    predicates = cb.and(predicates, cb.like(root.get("reason"), "%" + filter.getReason() + "%"));
                 }
                 if (filter.getIsTaxable() != null) {
                     predicates = cb.and(predicates, cb.equal(root.get("isTaxable"), filter.getIsTaxable()));
@@ -233,11 +228,6 @@ public class SalaryAdjustmentServiceImpl implements SalaryAdjustmentService {
         SalaryAdjustment adjustment = repository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(SalaryAdjustment.class, id));
 
-        // Kiểm tra đã lock chưa
-        if (PayrollPeriod.Status.LOCKED.equals(adjustment.getPayrollPeriod().getStatus())) {
-            throw new IllegalStateException("Kỳ lương đã bị khóa, không thể duyệt");
-        }
-
         // Đánh dấu duyệt
         adjustment.setStatus(SalaryAdjustment.Status.APPROVED);
 
@@ -248,31 +238,6 @@ public class SalaryAdjustmentServiceImpl implements SalaryAdjustmentService {
                 id,
                 "PAYROLL_PERIOD",
                 "Duyệt kỳ lương: " + adjustment.getPayrollPeriod().getName(),
-                securityUtil.getCurrentUsername());
-    }
-
-    /**
-     * Từ chối duyệt điều chỉnh lương
-     */
-    @Override
-    @Transactional
-    public void reject(UUID id, String reason) {
-        SalaryAdjustment adjustment = repository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException(SalaryAdjustment.class, id));
-
-        // Không cho reject khi đã lock
-        if (SalaryAdjustment.Status.LOCKED.equals(adjustment.getStatus())) {
-            throw new IllegalStateException("Điều chỉnh lương đã bị khóa, không thể từ chối");
-        }
-
-        adjustment.setStatus(SalaryAdjustment.Status.REJECTED);
-
-        repository.save(adjustment);
-
-        actionLogUtil.logUpdate(
-                id,
-                "SALARY_ADJUSTMENT",
-                "Từ chối duyệt điều chỉnh lương: " + adjustment.getId() + " - Lý do: " + reason,
                 securityUtil.getCurrentUsername());
     }
 }

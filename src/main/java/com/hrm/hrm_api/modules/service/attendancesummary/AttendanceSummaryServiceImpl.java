@@ -148,11 +148,6 @@ public class AttendanceSummaryServiceImpl implements AttendanceSummaryService {
         AttendanceSummary attendanceSummary = repository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(AttendanceSummary.class, id));
 
-        // Kiểm tra đã lock chưa
-        if (PayrollPeriod.Status.LOCKED.equals(attendanceSummary.getPayrollPeriod().getStatus())) {
-            throw new IllegalStateException("Kỳ lương đã bị khóa, không thể duyệt");
-        }
-
         // Đánh dấu duyệt
         attendanceSummary.setStatus(AttendanceSummary.Status.APPROVED);
 
@@ -166,30 +161,6 @@ public class AttendanceSummaryServiceImpl implements AttendanceSummaryService {
                 securityUtil.getCurrentUsername());
     }
 
-    /**
-     * Từ chối duyệt điều chỉnh lương
-     */
-    @Override
-    @Transactional
-    public void reject(UUID id, String reason) {
-        AttendanceSummary attendanceSummary = repository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException(AttendanceSummary.class, id));
-
-        // Không cho reject khi đã lock
-        if (AttendanceSummary.Status.LOCKED.equals(attendanceSummary.getStatus())) {
-            throw new IllegalStateException("Kỳ lương đã bị khóa, không thể từ chối");
-        }
-
-        attendanceSummary.setStatus(AttendanceSummary.Status.REJECTED);
-
-        repository.save(attendanceSummary);
-
-        actionLogUtil.logUpdate(
-                id,
-                "ATTENDANCE_SUMMARY",
-                "Từ chối duyệt công: " + attendanceSummary.getId() + " - Lý do: " + reason,
-                securityUtil.getCurrentUsername());
-    }
 
     @Override
     @Transactional

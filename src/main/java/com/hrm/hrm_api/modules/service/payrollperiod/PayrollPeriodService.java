@@ -23,7 +23,5 @@ public interface PayrollPeriodService {
     void summarizeAttendance(UUID payrollPeriodId);
     void activate(UUID payrollPeriodId);
     void deactivate(UUID payrollPeriodId);
-    void lock(UUID payrollPeriodId);
     void approve(UUID id);
-    void reject(UUID id, String reason);
 }

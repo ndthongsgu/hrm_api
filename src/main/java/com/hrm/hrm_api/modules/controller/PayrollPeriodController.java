@@ -88,15 +88,6 @@ public class PayrollPeriodController {
         return ResponseEntity.ok(BaseResponse.ok("Tổng hợp công thành công"));
     }
 
-    /**
-     * Bước 4: Chốt kỳ lương (Lock)
-     */
-    @PostMapping("/{id}/lock")
-    @RequirePermission(module = "PAYROLL", action = PermissionDefinition.LOCK)
-    public ResponseEntity<BaseResponse<String>> lockPeriod(@PathVariable UUID id) {
-        service.lock(id);
-        return ResponseEntity.ok(BaseResponse.ok("Chốt kỳ lương thành công"));
-    }
 
     /**
      * Duyệt kỳ lương
@@ -106,15 +97,5 @@ public class PayrollPeriodController {
     public ResponseEntity<BaseResponse<String>> approvePeriod(@PathVariable UUID id) {
         service.approve(id);
         return ResponseEntity.ok(BaseResponse.ok("Duyệt kỳ lương thành công"));
-    }
-
-    /**
-     * Từ chối duyệt kỳ lương
-     */
-    @PostMapping("/{id}/reject")
-    @RequirePermission(module = "PAYROLL", action = PermissionDefinition.REJECT)
-    public ResponseEntity<BaseResponse<String>> rejectPeriod(@PathVariable UUID id, @RequestParam(required = false) String reason) {
-        service.reject(id, reason);
-        return ResponseEntity.ok(BaseResponse.ok("Từ chối duyệt kỳ lương thành công"));
     }
 }

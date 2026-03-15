@@ -168,17 +168,6 @@ public class PayslipServiceImpl implements PayslipService {
 
     @Override
     @Transactional
-    public void reject(UUID id, String reason) {
-        Payslip payslip = findById(id);
-        payslip.setStatus(Payslip.Status.REJECTED);
-        if (reason != null) {
-            payslip.setReason(reason);
-        }
-        payslipRepository.save(payslip);
-    }
-
-    @Override
-    @Transactional
     public List<Payslip> generateForPayrollPeriod(UUID payrollPeriodId) {
         PayrollPeriod period = payrollPeriodRepository.findById(payrollPeriodId)
                 .orElseThrow(() -> new IllegalArgumentException("Payroll period not found: " + payrollPeriodId));

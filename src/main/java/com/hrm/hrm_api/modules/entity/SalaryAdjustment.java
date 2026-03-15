@@ -29,8 +29,6 @@ public class SalaryAdjustment extends BaseEntity {
     @Enumerated(EnumType.STRING)
     private Type type;
 
-    private String reason;
-
     private Boolean isTaxable = true;
 
     private Boolean isNetOnly = false;

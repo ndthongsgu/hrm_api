@@ -84,6 +84,4 @@ public class Payslip extends BaseEntity {
     public enum Status {
         APPROVED, PENDING
     }
-
-    private String reason;
 }

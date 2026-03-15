@@ -93,13 +93,4 @@ public class PayslipController {
         return ResponseEntity.ok(BaseResponse.ok("Duyệt phiếu lương thành công"));
     }
 
-    /**
-     * Từ chối duyệt phiếu lương
-     */
-    @PostMapping("/{id}/reject")
-    @RequirePermission(module = "PAYROLL", action = PermissionDefinition.REJECT)
-    public ResponseEntity<BaseResponse<String>> reject(@PathVariable java.util.UUID id, @RequestParam(required = false) String reason) {
-        service.reject(id, reason);
-        return ResponseEntity.ok(BaseResponse.ok("Từ chối duyệt phiếu lương thành công"));
-    }
 }

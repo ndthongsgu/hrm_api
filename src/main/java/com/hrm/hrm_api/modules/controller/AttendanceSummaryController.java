@@ -81,13 +81,4 @@ public class AttendanceSummaryController {
         return ResponseEntity.ok(BaseResponse.ok("Duyệt công thành công"));
     }
 
-    /**
-     * Từ chối duyệt công
-     */
-    @PostMapping("/{id}/reject")
-    @RequirePermission(module = "PAYROLL", action = PermissionDefinition.REJECT)
-    public ResponseEntity<BaseResponse<String>> reject(@PathVariable UUID id, @RequestParam(required = false) String reason) {
-        service.reject(id, reason);
-        return ResponseEntity.ok(BaseResponse.ok("Từ chối duyệt công thành công"));
-    }
 }

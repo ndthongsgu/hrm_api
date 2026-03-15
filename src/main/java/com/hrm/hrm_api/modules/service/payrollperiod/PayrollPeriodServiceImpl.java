@@ -26,13 +26,6 @@ public class PayrollPeriodServiceImpl implements PayrollPeriodService {
     private final EmployeeRepository employeeRepository;
     private final AttendanceSummaryRepository attendanceSummaryRepository;
     private final DailyAttendanceRepository dailyAttendanceRepository;
-    private final ContractRepository contractRepository;
-    private final ContractAllowanceRepository contractAllowanceRepository;
-    private final SalaryAdjustmentRepository salaryAdjustmentRepository;
-    private final PayslipRepository payslipRepository;
-    private final DependentRepository dependentRepository;
-    private final InsuranceConfigRepository insuranceConfigRepository;
-    private final TaxBracketRepository taxBracketRepository;
     private final ActionLogUtil actionLogUtil;
     private final SecurityUtil securityUtil;
 
@@ -55,13 +48,6 @@ public class PayrollPeriodServiceImpl implements PayrollPeriodService {
         this.employeeRepository = employeeRepository;
         this.attendanceSummaryRepository = attendanceSummaryRepository;
         this.dailyAttendanceRepository = dailyAttendanceRepository;
-        this.contractRepository = contractRepository;
-        this.contractAllowanceRepository = contractAllowanceRepository;
-        this.salaryAdjustmentRepository = salaryAdjustmentRepository;
-        this.payslipRepository = payslipRepository;
-        this.dependentRepository = dependentRepository;
-        this.insuranceConfigRepository = insuranceConfigRepository;
-        this.taxBracketRepository = taxBracketRepository;
         this.actionLogUtil = actionLogUtil;
         this.securityUtil = securityUtil;
     }
@@ -243,17 +229,6 @@ public class PayrollPeriodServiceImpl implements PayrollPeriodService {
         }
     }
 
-    /**
-     * Bước 4: Chốt/Lock kỳ lương
-     */
-    @Transactional
-    public void lock(UUID payrollPeriodId) {
-        PayrollPeriod period = repository.findById(payrollPeriodId)
-                .orElseThrow(() -> new RuntimeException("PayrollPeriod not found"));
-
-        period.setStatus(PayrollPeriod.Status.LOCKED);
-        repository.save(period);
-    }
 
     /**
      * Soft delete: Deactivate payroll period
@@ -263,7 +238,7 @@ public class PayrollPeriodServiceImpl implements PayrollPeriodService {
         PayrollPeriod period = repository.findById(payrollPeriodId)
                 .orElseThrow(() -> new RuntimeException("PayrollPeriod not found"));
 
-        period.setStatus(PayrollPeriod.Status.REJECTED);
+        period.setIsDeleted(true);
         repository.save(period);
 
         actionLogUtil.logDelete(
@@ -300,10 +275,6 @@ public class PayrollPeriodServiceImpl implements PayrollPeriodService {
         PayrollPeriod period = repository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(PayrollPeriod.class, id));
 
-        // Kiểm tra đã lock chưa
-        if (PayrollPeriod.Status.LOCKED.equals(period.getStatus())) {
-            throw new IllegalStateException("Kỳ lương đã bị khóa, không thể duyệt");
-        }
 
         // Đánh dấu duyệt
         period.setStatus(PayrollPeriod.Status.APPROVED);
@@ -314,32 +285,6 @@ public class PayrollPeriodServiceImpl implements PayrollPeriodService {
                 id,
                 "PAYROLL_PERIOD",
                 "Duyệt kỳ lương: " + period.getName(),
-                securityUtil.getCurrentUsername());
-    }
-
-    /**
-     * Từ chối duyệt kỳ lương
-     */
-    @Override
-    @Transactional
-    public void reject(UUID id, String reason) {
-        PayrollPeriod period = repository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException(PayrollPeriod.class, id));
-
-        // Không cho reject khi đã lock
-        if (PayrollPeriod.Status.LOCKED.equals(period.getStatus())) {
-            throw new IllegalStateException("Kỳ lương đã bị khóa, không thể từ chối");
-        }
-
-        period.setStatus(PayrollPeriod.Status.REJECTED);
-
-        repository.save(period);
-
-        actionLogUtil.logUpdate(
-                id,
-                "PAYROLL_PERIOD",
-                "Từ chối duyệt kỳ lương: " + period.getName() +
-                        (reason != null ? " - Lý do: " + reason : ""),
                 securityUtil.getCurrentUsername());
     }
 }

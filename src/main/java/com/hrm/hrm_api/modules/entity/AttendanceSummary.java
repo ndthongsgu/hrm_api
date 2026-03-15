@@ -28,7 +28,6 @@ public class AttendanceSummary extends BaseEntity {
     
     @Enumerated(EnumType.STRING)
     private Status status = Status.PENDING; // e.g., "APPROVED", "REJECTED", "PENDING", "LOCKED"
-    private String reason;
 
     public enum Status {
         APPROVED, PENDING, LOCKED

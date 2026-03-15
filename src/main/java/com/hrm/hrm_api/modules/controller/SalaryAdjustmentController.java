@@ -90,13 +90,4 @@ public class SalaryAdjustmentController {
         return ResponseEntity.ok(BaseResponse.ok("Duyệt điều chỉnh lương thành công"));
     }
 
-    /**
-     * Từ chối duyệt điều chỉnh lương
-     */
-    @PostMapping("/{id}/reject")
-    @RequirePermission(module = "PAYROLL", action = PermissionDefinition.REJECT)
-    public ResponseEntity<BaseResponse<String>> reject(@PathVariable UUID id, @RequestParam(required = false) String reason) {
-        service.reject(id, reason);
-        return ResponseEntity.ok(BaseResponse.ok("Từ chối duyệt điều chỉnh lương thành công"));
-    }
 }
