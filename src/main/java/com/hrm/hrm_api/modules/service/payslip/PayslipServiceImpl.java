@@ -98,9 +98,19 @@ public class PayslipServiceImpl extends AbstractCrudService<Payslip> implements 
             }
             Contract contract = contractOpt.get();
 
-            BigDecimal grossSalary = nvl(contract.getActualSalary());
             BigDecimal standardDays = toDecimal(period.getStandardWorkingDays() == null ? 26F : period.getStandardWorkingDays());
             BigDecimal actualDays = toDecimal(summary.getActualWorkingDays() == null ? standardDays.floatValue() : summary.getActualWorkingDays());
+            long dependentCount = dependentRepository.countByEmployeeIdAndIsQualifiedTrue(employeeId);
+            BigDecimal deductionDependents = dependentDeductionUnit.multiply(BigDecimal.valueOf(dependentCount));
+
+            BigDecimal grossSalary = resolveGrossSalary(
+                    contract,
+                    standardDays,
+                    actualDays,
+                    personalDeduction,
+                    deductionDependents,
+                    calculationDate
+            );
 
             BigDecimal salaryByWorkdays = divide(grossSalary.multiply(actualDays), standardDays);
 
@@ -143,9 +153,6 @@ public class PayslipServiceImpl extends AbstractCrudService<Payslip> implements 
             BigDecimal bhytAmount = percent(bhxhBase, healthRate);
             BigDecimal bhtnAmount = percent(bhxhBase, unemploymentRate);
             BigDecimal totalInsurance = bhxhAmount.add(bhytAmount).add(bhtnAmount);
-
-            long dependentCount = dependentRepository.countByEmployeeIdAndIsQualifiedTrue(employeeId);
-            BigDecimal deductionDependents = dependentDeductionUnit.multiply(BigDecimal.valueOf(dependentCount));
 
             BigDecimal taxableIncome = salaryByWorkdays
                     .add(taxableAllowance)
@@ -200,6 +207,78 @@ public class PayslipServiceImpl extends AbstractCrudService<Payslip> implements 
                 .stream()
                 .filter(c -> c.getEndDate() == null || !c.getEndDate().isBefore(date))
                 .findFirst();
+    }
+
+    private BigDecimal resolveGrossSalary(
+            Contract contract,
+            BigDecimal standardDays,
+            BigDecimal actualDays,
+            BigDecimal personalDeduction,
+            BigDecimal deductionDependents,
+            LocalDate calculationDate
+    ) {
+        BigDecimal contractSalary = nvl(contract.getActualSalary());
+        if (!Boolean.TRUE.equals(contract.getIsNet())) {
+            return contractSalary;
+        }
+
+        BigDecimal targetNetByWorkdays = divide(contractSalary.multiply(actualDays), standardDays);
+        BigDecimal totalInsurance = calculateTotalInsurance(contract, calculationDate);
+
+        BigDecimal low = ZERO;
+        BigDecimal high = contractSalary.max(BigDecimal.ONE);
+
+        for (int i = 0; i < 20; i++) {
+            BigDecimal netAtHigh = calculateNetByWorkdaysFromGross(high, standardDays, actualDays, totalInsurance, personalDeduction, deductionDependents, calculationDate);
+            if (netAtHigh.compareTo(targetNetByWorkdays) >= 0) {
+                break;
+            }
+            high = high.multiply(BigDecimal.valueOf(2));
+        }
+
+        for (int i = 0; i < 40; i++) {
+            BigDecimal mid = low.add(high).divide(BigDecimal.valueOf(2), 6, RoundingMode.HALF_UP);
+            BigDecimal netAtMid = calculateNetByWorkdaysFromGross(mid, standardDays, actualDays, totalInsurance, personalDeduction, deductionDependents, calculationDate);
+            if (netAtMid.compareTo(targetNetByWorkdays) >= 0) {
+                high = mid;
+            } else {
+                low = mid;
+            }
+        }
+
+        return high.setScale(2, RoundingMode.HALF_UP);
+    }
+
+    private BigDecimal calculateTotalInsurance(Contract contract, LocalDate calculationDate) {
+        BigDecimal baseSalary = nvl(contract.getBaseSalary());
+        BigDecimal bhxhBase = calculateInsuranceBase(baseSalary, "SOCIAL", calculationDate);
+        BigDecimal socialRate = getInsuranceEmployeeRate("SOCIAL", calculationDate);
+        BigDecimal healthRate = getInsuranceEmployeeRate("HEALTH", calculationDate);
+        BigDecimal unemploymentRate = getInsuranceEmployeeRate("UNEMPLOYMENT", calculationDate);
+
+        BigDecimal bhxhAmount = percent(bhxhBase, socialRate);
+        BigDecimal bhytAmount = percent(bhxhBase, healthRate);
+        BigDecimal bhtnAmount = percent(bhxhBase, unemploymentRate);
+        return bhxhAmount.add(bhytAmount).add(bhtnAmount);
+    }
+
+    private BigDecimal calculateNetByWorkdaysFromGross(
+            BigDecimal grossSalary,
+            BigDecimal standardDays,
+            BigDecimal actualDays,
+            BigDecimal totalInsurance,
+            BigDecimal personalDeduction,
+            BigDecimal deductionDependents,
+            LocalDate calculationDate
+    ) {
+        BigDecimal salaryByWorkdays = divide(grossSalary.multiply(actualDays), standardDays);
+        BigDecimal taxableIncome = salaryByWorkdays.subtract(totalInsurance).max(ZERO);
+        BigDecimal assessableIncome = taxableIncome
+                .subtract(personalDeduction)
+                .subtract(deductionDependents)
+                .max(ZERO);
+        BigDecimal taxAmount = calculatePit(assessableIncome, calculationDate);
+        return salaryByWorkdays.subtract(totalInsurance).subtract(taxAmount).setScale(2, RoundingMode.HALF_UP);
     }
 
     private BigDecimal getSettingValue(String key, LocalDate effectiveDate) {

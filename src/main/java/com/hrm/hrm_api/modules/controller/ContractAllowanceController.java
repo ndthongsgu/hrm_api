@@ -12,6 +12,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
+import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/contract-allowances")
@@ -32,6 +34,11 @@ public class ContractAllowanceController {
     @GetMapping("/{id}")
     public ResponseEntity<BaseResponse<ContractAllowance>> getById(@PathVariable java.util.UUID id) {
         return ResponseEntity.ok(BaseResponse.ok(service.findById(id)));
+    }
+
+    @GetMapping("/by-contract/{contractId}")
+    public ResponseEntity<BaseResponse<List<ContractAllowance>>> getByContract(@PathVariable UUID contractId) {
+        return ResponseEntity.ok(BaseResponse.ok(service.findByContractId(contractId)));
     }
 
     @PostMapping

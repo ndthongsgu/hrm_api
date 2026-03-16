@@ -12,6 +12,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
+import java.time.LocalDate;
+import java.util.Optional;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/contracts")
@@ -32,6 +35,21 @@ public class ContractController {
     @GetMapping("/{id}")
     public ResponseEntity<BaseResponse<Contract>> getById(@PathVariable java.util.UUID id) {
         return ResponseEntity.ok(BaseResponse.ok(contractService.findById(id)));
+    }
+
+    @GetMapping("/active")
+    public ResponseEntity<BaseResponse<Contract>> getActiveContract(
+            @RequestParam UUID employeeId,
+            @RequestParam(required = false) UUID payrollPeriodId,
+            @RequestParam(required = false) LocalDate date
+    ) {
+        Optional<Contract> contractOpt;
+        if (payrollPeriodId != null) {
+            contractOpt = contractService.findActiveByPayrollPeriod(employeeId, payrollPeriodId);
+        } else {
+            contractOpt = contractService.findActiveByDate(employeeId, date == null ? LocalDate.now() : date);
+        }
+        return ResponseEntity.ok(BaseResponse.ok(contractOpt.orElse(null)));
     }
 
     @PostMapping
