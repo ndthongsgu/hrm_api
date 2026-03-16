@@ -16,6 +16,11 @@ public interface ContractRepository extends JpaRepository<Contract, UUID> {
 			String status,
 			LocalDate date
 	);
+
+    List<Contract> findByEmployeeIdAndStartDateLessThanEqualOrderByStartDateDesc(
+            UUID employeeId,
+            LocalDate date
+    );
     
     @Query("SELECT c FROM Contract c WHERE c.employee.id = :employeeId AND c.status = :status")
     Optional<Contract> findByEmployeeAndStatus(
