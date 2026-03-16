@@ -1,5 +1,6 @@
 package com.hrm.hrm_api.modules.entity;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -17,6 +18,7 @@ public class Dependent extends BaseEntity {
 
     @ManyToOne
     @JoinColumn(name = "employee_id")
+    @JsonBackReference("employee-dependents")
     private Employee employee;
 
     private String fullName;

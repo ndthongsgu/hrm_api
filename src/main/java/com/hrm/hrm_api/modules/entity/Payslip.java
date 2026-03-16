@@ -78,6 +78,10 @@ public class Payslip extends BaseEntity {
     @Column(precision = 15, scale = 2)
     private BigDecimal netSalary;
 
-    @CreationTimestamp
-    private LocalDateTime createdAt;
+    @Enumerated(EnumType.STRING)
+    private Status status = Status.PENDING; // e.g., "APPROVED", "REJECTED", "PENDING", "LOCKED"
+
+    public enum Status {
+        APPROVED, PENDING
+    }
 }

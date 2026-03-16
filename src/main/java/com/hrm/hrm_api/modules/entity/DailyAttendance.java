@@ -33,5 +33,10 @@ public class DailyAttendance extends BaseEntity {
     private Integer earlyMinutes;
     private Float workingHours;
 
-    private String status; // OK, LATE, ABSENT, LEAVE
+    @Enumerated(EnumType.STRING)
+    private Status status; // OK, LATE, ABSENT, LEAVE, EARLY
+
+    public enum Status {
+        OK, LATE, ABSENT, LEAVE, EARLY
+    }
 }

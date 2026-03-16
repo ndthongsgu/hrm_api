@@ -26,11 +26,21 @@ public class SalaryAdjustment extends BaseEntity {
     @Column(precision = 15, scale = 2)
     private BigDecimal amount;
 
-    private String type; // BONUS, FINE, ADVANCE, BHXH_BENEFIT
-
-    private String reason;
+    @Enumerated(EnumType.STRING)
+    private Type type;
 
     private Boolean isTaxable = true;
 
     private Boolean isNetOnly = false;
+
+    @Enumerated(EnumType.STRING)
+    private Status status = Status.PENDING; // e.g., "APPROVED", "REJECTED", "PENDING", "LOCKED"
+
+    public enum Status {
+        APPROVED, PENDING, LOCKED
+    }
+
+    public enum Type {
+        BONUS, FINE, ADVANCE, BHXH_BENEFIT,
+    }
 }

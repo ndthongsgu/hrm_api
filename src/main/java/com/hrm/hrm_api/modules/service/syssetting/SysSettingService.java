@@ -1,7 +1,15 @@
 package com.hrm.hrm_api.modules.service.syssetting;
 
 import com.hrm.hrm_api.modules.entity.SysSetting;
-import com.hrm.hrm_api.modules.service.CrudService;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
-public interface SysSettingService extends CrudService<SysSetting> {
+import java.util.UUID;
+
+public interface SysSettingService {
+    Page<SysSetting> findAll(Pageable pageable);
+    SysSetting findById(UUID id);
+    SysSetting create(SysSetting entity);
+    SysSetting update(UUID id, SysSetting entity);
+    void delete(UUID id);
 }
