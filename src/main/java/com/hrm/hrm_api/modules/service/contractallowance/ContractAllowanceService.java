@@ -4,6 +4,7 @@ import com.hrm.hrm_api.modules.entity.ContractAllowance;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
+import java.util.List;
 import java.util.UUID;
 
 public interface ContractAllowanceService {
@@ -12,4 +13,5 @@ public interface ContractAllowanceService {
     ContractAllowance create(ContractAllowance entity);
     ContractAllowance update(UUID id, ContractAllowance entity);
     void delete(UUID id);
+    List<ContractAllowance> findByContractId(UUID contractId);
 }
