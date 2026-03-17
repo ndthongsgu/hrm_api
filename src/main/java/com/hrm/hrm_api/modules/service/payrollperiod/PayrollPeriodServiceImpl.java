@@ -52,11 +52,9 @@ public class PayrollPeriodServiceImpl implements PayrollPeriodService {
         this.securityUtil = securityUtil;
     }
 
-    @Override
-    public Page<PayrollPeriod> findAll(Pageable pageable) {
-        return findAll(null, pageable);
-    }
-
+    /**
+     * Tìm kỳ lương theo ID
+     */
     @Override
     public PayrollPeriod findById(UUID id) {
         return repository.findById(id).orElseThrow(() -> new ResourceNotFoundException(PayrollPeriod.class, id));
@@ -65,9 +63,18 @@ public class PayrollPeriodServiceImpl implements PayrollPeriodService {
     @Override
     @Transactional
     public PayrollPeriod update(UUID id, PayrollPeriod entity) {
-        findById(id);
-        entity.setId(id);
-        PayrollPeriod updated = repository.save(entity);
+        // Fetch existing entity from DB to maintain version for optimistic locking
+        PayrollPeriod existing = repository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(PayrollPeriod.class, id));
+        
+        // Update only the fields that should be changed
+        existing.setName(entity.getName());
+        existing.setStartDate(entity.getStartDate());
+        existing.setEndDate(entity.getEndDate());
+        existing.setStandardWorkingDays(entity.getStandardWorkingDays());
+        existing.setStatus(entity.getStatus());
+        
+        PayrollPeriod updated = repository.save(existing);
 
         actionLogUtil.logUpdate(
                 id,
@@ -85,11 +92,6 @@ public class PayrollPeriodServiceImpl implements PayrollPeriodService {
             throw new ResourceNotFoundException(PayrollPeriod.class, id);
         }
         repository.deleteById(id);
-    }
-
-    @Override
-    public Page<PayrollPeriod> findAll(PayrollPeriodFilter filter, Pageable pageable) {
-        return repository.findAll(buildSpec(filter), pageable);
     }
 
     private Specification<PayrollPeriod> buildSpec(PayrollPeriodFilter filter) {
@@ -114,9 +116,10 @@ public class PayrollPeriodServiceImpl implements PayrollPeriodService {
                 if (filter.getEndDate() != null) {
                     predicates = cb.and(predicates, cb.lessThanOrEqualTo(root.get("endDate"), filter.getEndDate()));
                 }
-                // If isDeleted is null, no filter on isDeleted (show all)
-            }
-
+                if (filter.getIsDeleted() != null) {
+                    predicates = cb.and(predicates, cb.equal(root.get("isDeleted"), filter.getIsDeleted()));
+                }
+            } 
             return predicates;
         };
     }
@@ -136,7 +139,7 @@ public class PayrollPeriodServiceImpl implements PayrollPeriodService {
 
     @Override
     public List<SelectOptionDto> getSelectOptions() {
-        List<PayrollPeriod> payrollPeriods = repository.findAllByIsDeletedFalseOrderByCreatedAtDesc();
+        List<PayrollPeriod> payrollPeriods = repository.findAllByIsDeletedAndStatusOrderByCreatedAtDesc(false, PayrollPeriod.Status.APPROVED);
         return payrollPeriods.stream()
                 .map(period -> new SelectOptionDto(period.getId(), period.getName()))
                 .collect(Collectors.toList());
@@ -241,7 +244,7 @@ public class PayrollPeriodServiceImpl implements PayrollPeriodService {
         period.setIsDeleted(true);
         repository.save(period);
 
-        actionLogUtil.logDelete(
+        actionLogUtil.logDeactivate(
                 payrollPeriodId,
                 "PAYROLL_PERIOD",
                 "Ngừng hoạt động kỳ lương: " + period.getName(),
@@ -285,6 +288,28 @@ public class PayrollPeriodServiceImpl implements PayrollPeriodService {
                 id,
                 "PAYROLL_PERIOD",
                 "Duyệt kỳ lương: " + period.getName(),
+                securityUtil.getCurrentUsername());
+    }
+
+    /**
+     * Hủy duyệt kỳ lương
+     */
+    @Override
+    @Transactional
+    public void unApprove(UUID id) {
+        PayrollPeriod period = repository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(PayrollPeriod.class, id));
+
+
+        // Đánh dấu hủy duyệt
+        period.setStatus(PayrollPeriod.Status.PENDING);
+
+        repository.save(period);
+
+        actionLogUtil.logCancel(
+                id,
+                "PAYROLL_PERIOD",
+                "Hủy duyệt kỳ lương: " + period.getName(),
                 securityUtil.getCurrentUsername());
     }
 }

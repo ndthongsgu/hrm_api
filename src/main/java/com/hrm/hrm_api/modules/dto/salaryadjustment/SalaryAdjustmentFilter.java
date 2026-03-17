@@ -13,6 +13,7 @@ public class SalaryAdjustmentFilter {
     private UUID employeeId;
     private BigDecimal amount;
     private SalaryAdjustment.Type type;
+    private String reason;
     private Boolean isTaxable;
     private Boolean isNetOnly;
     private Boolean isDeleted;

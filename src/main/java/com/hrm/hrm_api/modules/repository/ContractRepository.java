@@ -22,7 +22,20 @@ public interface ContractRepository extends JpaRepository<Contract, UUID> {
             LocalDate date
     );
     
-    @Query("SELECT c FROM Contract c WHERE c.employee.id = :employeeId AND c.status = :status")
+    @Query("SELECT c FROM Contract c WHERE c.employee.id = :employeeId AND c.status = :status AND c.isDeleted = false ORDER BY c.startDate DESC")
+    List<Contract> findByEmployeeIdAndStatusAndIsDeletedFalseOrderByStartDateDesc(
+        @Param("employeeId") UUID employeeId,
+        @Param("status") String status
+    );
+    
+    @Query("SELECT c FROM Contract c WHERE c.employee.id = :employeeId AND c.status = :status AND c.startDate <= :date AND c.isDeleted = false ORDER BY c.startDate DESC")
+    List<Contract> findByEmployeeIdAndStatusAndStartDateLessThanEqualAndIsDeletedFalseOrderByStartDateDesc(
+        @Param("employeeId") UUID employeeId,
+        @Param("status") String status,
+        @Param("date") LocalDate date
+    );
+    
+    @Query("SELECT c FROM Contract c WHERE c.employee.id = :employeeId AND c.employee.id = :employeeId AND c.status = :status")
     Optional<Contract> findByEmployeeAndStatus(
         @Param("employeeId") UUID employeeId,
         @Param("status") String status

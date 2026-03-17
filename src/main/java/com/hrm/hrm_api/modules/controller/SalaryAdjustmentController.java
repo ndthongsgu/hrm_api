@@ -1,7 +1,6 @@
 package com.hrm.hrm_api.modules.controller;
 
 import com.hrm.hrm_api.modules.dto.base.BaseResponse;
-import com.hrm.hrm_api.modules.dto.base.PageResponse;
 import com.hrm.hrm_api.modules.dto.base.PaginationResponse;
 import com.hrm.hrm_api.modules.dto.request.SalaryAdjustmentCreateRequest;
 import com.hrm.hrm_api.common.constants.PermissionDefinition;
@@ -9,8 +8,6 @@ import com.hrm.hrm_api.config.annotations.RequirePermission;
 import com.hrm.hrm_api.modules.dto.request.SalaryAdjustmentSearchRequest;
 import com.hrm.hrm_api.modules.entity.SalaryAdjustment;
 import com.hrm.hrm_api.modules.service.salaryadjustment.SalaryAdjustmentService;
-import com.hrm.hrm_api.modules.util.PaginationUtils;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
@@ -28,13 +25,6 @@ public class SalaryAdjustmentController {
 
     public SalaryAdjustmentController(SalaryAdjustmentService service) {
         this.service = service;
-    }
-
-    @GetMapping
-    @RequirePermission(module = "PAYROLL", action = PermissionDefinition.READ)
-    public ResponseEntity<BaseResponse<PageResponse<SalaryAdjustment>>> list(@PageableDefault(size = 20) Pageable pageable) {
-        Page<SalaryAdjustment> page = service.findAll(pageable);
-        return ResponseEntity.ok(BaseResponse.ok(PaginationUtils.toPageResponse(page)));
     }
 
     @PostMapping
@@ -90,4 +80,13 @@ public class SalaryAdjustmentController {
         return ResponseEntity.ok(BaseResponse.ok("Duyệt điều chỉnh lương thành công"));
     }
 
+    /**
+     * Hủy Duyệt điều chỉnh lương
+     */
+    @PostMapping("/{id}/unApprove")
+    @RequirePermission(module = "PAYROLL", action = PermissionDefinition.APPROVE)
+    public ResponseEntity<BaseResponse<String>> unApprove(@PathVariable UUID id) {
+        service.unApprove(id);
+        return ResponseEntity.ok(BaseResponse.ok("Hủy duyệt điều chỉnh lương thành công"));
+    }
 }

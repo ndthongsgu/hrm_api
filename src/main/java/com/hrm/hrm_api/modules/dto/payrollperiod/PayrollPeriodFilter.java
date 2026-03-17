@@ -9,7 +9,7 @@ import com.hrm.hrm_api.modules.entity.PayrollPeriod;
 @Data
 public class PayrollPeriodFilter {
     private String name;
-    private PayrollPeriod.Status status; // APPROVED, PENDING, LOCKED;
+    private PayrollPeriod.Status status; // APPROVED, PENDING;
     private Boolean isDeleted;
     private LocalDate startDate;
     private LocalDate endDate;

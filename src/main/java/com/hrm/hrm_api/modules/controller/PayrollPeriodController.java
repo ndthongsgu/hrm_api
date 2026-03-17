@@ -61,7 +61,7 @@ public class PayrollPeriodController {
         return ResponseEntity.ok(BaseResponse.ok(service.update(id, payload)));
     }
 
-    @DeleteMapping("/{id}")
+    @DeleteMapping("/{id}/deActivate")
     @RequirePermission(module = "PAYROLL", action = PermissionDefinition.DELETE)
     public ResponseEntity<BaseResponse<String>> delete(@PathVariable UUID id) {
         service.deactivate(id);
@@ -78,24 +78,24 @@ public class PayrollPeriodController {
         return ResponseEntity.ok(BaseResponse.ok("Kích hoạt lại kỳ lương thành công"));
     }
 
-    /**
-     * Bước 1: Tự động tổng hợp công
-     */
-    @PostMapping("/{id}/summarize-attendance")
-    @RequirePermission(module = "PAYROLL", action = PermissionDefinition.UPDATE)
-    public ResponseEntity<BaseResponse<String>> summarizeAttendance(@PathVariable UUID id) {
-        service.summarizeAttendance(id);
-        return ResponseEntity.ok(BaseResponse.ok("Tổng hợp công thành công"));
-    }
-
 
     /**
      * Duyệt kỳ lương
      */
     @PostMapping("/{id}/approve")
     @RequirePermission(module = "PAYROLL", action = PermissionDefinition.APPROVE)
-    public ResponseEntity<BaseResponse<String>> approvePeriod(@PathVariable UUID id) {
+    public ResponseEntity<BaseResponse<String>> approve(@PathVariable UUID id) {
         service.approve(id);
         return ResponseEntity.ok(BaseResponse.ok("Duyệt kỳ lương thành công"));
+    }
+
+    /**
+     * Hủy Duyệt kỳ lương
+     */
+    @PostMapping("/{id}/unApprove")
+    @RequirePermission(module = "PAYROLL", action = PermissionDefinition.APPROVE)
+    public ResponseEntity<BaseResponse<String>> unApprove(@PathVariable UUID id) {
+        service.unApprove(id);
+        return ResponseEntity.ok(BaseResponse.ok("Hủy duyệt kỳ lương thành công"));
     }
 }

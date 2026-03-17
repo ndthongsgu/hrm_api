@@ -36,6 +36,9 @@ public class SalaryAdjustmentServiceImpl implements SalaryAdjustmentService {
         this.securityUtil = securityUtil;
     }
 
+    /**
+     * Tìm điều chỉnh lương theo ID
+     */
     @Override
     public SalaryAdjustment findById(UUID id) {
         return repository.findById(id).orElseThrow(() -> new ResourceNotFoundException(SalaryAdjustment.class, id));
@@ -50,6 +53,10 @@ public class SalaryAdjustmentServiceImpl implements SalaryAdjustmentService {
         repository.deleteById(id);
     }
 
+    /**
+     * Tạo mới điều chỉnh lương
+     * Văn bản có: kỳ lương và nhân viên hợp lệ
+     */
     @Override
     @Transactional
     public SalaryAdjustment create(SalaryAdjustmentCreateRequest request) {
@@ -74,6 +81,7 @@ public class SalaryAdjustmentServiceImpl implements SalaryAdjustmentService {
         entity.setType(request.getType());
         entity.setIsTaxable(request.getIsTaxable());
         entity.setIsNetOnly(request.getIsNetOnly());
+        entity.setReason(request.getReason());
 
         SalaryAdjustment saved = repository.save(entity);
 
@@ -90,6 +98,9 @@ public class SalaryAdjustmentServiceImpl implements SalaryAdjustmentService {
         return saved;
     }
 
+    /**
+     * Cập nhật điều chỉnh lương
+     */
     @Override
     @Transactional
     public SalaryAdjustment update(UUID id, SalaryAdjustmentCreateRequest request) {
@@ -111,6 +122,7 @@ public class SalaryAdjustmentServiceImpl implements SalaryAdjustmentService {
         entity.setType(request.getType());
         entity.setIsTaxable(request.getIsTaxable());
         entity.setIsNetOnly(request.getIsNetOnly());
+        entity.setReason(request.getReason());
         SalaryAdjustment updated = repository.save(entity);
 
         actionLogUtil.logUpdate(
@@ -122,16 +134,10 @@ public class SalaryAdjustmentServiceImpl implements SalaryAdjustmentService {
         return updated;
     }
 
-    @Override
-    public Page<SalaryAdjustment> findAll(Pageable pageable) {
-        return findAll(null, pageable);
-    }
-
-    @Override
-    public Page<SalaryAdjustment> findAll(SalaryAdjustmentFilter filter, Pageable pageable) {
-        return repository.findAll(buildSpec(filter), pageable);
-    }
-
+    /**
+     * Lấy tất cả điều chỉnh lương với phân trang
+     * Mặc định chỉ lấy các điều chỉnh chưa bị xoá (isDeleted = false)
+     */
     private Specification<SalaryAdjustment> buildSpec(SalaryAdjustmentFilter filter) {
         return (root, query, cb) -> {
             var predicates = cb.conjunction(); // Start with true
@@ -189,6 +195,10 @@ public class SalaryAdjustmentServiceImpl implements SalaryAdjustmentService {
                 salaryAdjustments.getSize());
     }
 
+    /**
+     * Ngừng hoạt động điều chỉnh lương (soft delete)
+     * Đảnh dấu isDeleted = true
+     */
     @Override
     @Transactional
     public void deactivate(UUID id) {
@@ -197,13 +207,17 @@ public class SalaryAdjustmentServiceImpl implements SalaryAdjustmentService {
         adjustment.setIsDeleted(true);
         repository.save(adjustment);
 
-        actionLogUtil.logDelete(
+        actionLogUtil.logDeactivate(
                 id,
                 "SALARY_ADJUSTMENT",
                 "Ngừng hoạt động điều chỉnh lương",
                 securityUtil.getCurrentUsername());
     }
 
+    /**
+     * Kích hoạt lại điều chỉnh lương (khôi phục từ soft delete)
+     * Đảnh dấu isDeleted = false
+     */
     @Override
     @Transactional
     public void activate(UUID id) {
@@ -236,8 +250,30 @@ public class SalaryAdjustmentServiceImpl implements SalaryAdjustmentService {
 
         actionLogUtil.logUpdate(
                 id,
-                "PAYROLL_PERIOD",
-                "Duyệt kỳ lương: " + adjustment.getPayrollPeriod().getName(),
+                "SALARY_ADJUSTMENT",
+                "Duyệt điều chỉnh lương nhân viên: " + adjustment.getEmployee().getEmployeeCode(),
+                securityUtil.getCurrentUsername());
+    }
+
+    /**
+     * Hủy duyệt điều chỉnh lương
+     */
+    @Override
+    @Transactional
+    public void unApprove(UUID id) {
+        SalaryAdjustment adjustment = repository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(SalaryAdjustment.class, id));
+
+        // Đánh dấu hủy duyệt
+        adjustment.setStatus(SalaryAdjustment.Status.PENDING);
+
+        repository.save(adjustment);
+
+
+        actionLogUtil.logCancel(
+                id,
+                "SALARY_ADJUSTMENT",
+                "Hủy duyệt điều chỉnh lương nhân viên: " + adjustment.getEmployee().getEmployeeCode(),
                 securityUtil.getCurrentUsername());
     }
 }

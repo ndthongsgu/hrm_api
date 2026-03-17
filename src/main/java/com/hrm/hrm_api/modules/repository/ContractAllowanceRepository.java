@@ -12,4 +12,7 @@ public interface ContractAllowanceRepository extends JpaRepository<ContractAllow
     
     @Query("SELECT ca FROM ContractAllowance ca WHERE ca.contract.id = :contractId")
     List<ContractAllowance> findByContractId(@Param("contractId") UUID contractId);
+    
+    @Query("SELECT ca FROM ContractAllowance ca WHERE ca.contract.id = :contractId AND ca.isDeleted = :isDeleted")
+    List<ContractAllowance> findByContractIdAndIsDeleted(@Param("contractId") UUID contractId, @Param("isDeleted") Boolean isDeleted);
 }

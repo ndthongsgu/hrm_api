@@ -14,9 +14,19 @@ public interface AttendanceSummaryRepository extends JpaRepository<AttendanceSum
 
     List<AttendanceSummary> findByPayrollPeriodId(UUID payrollPeriodId);
     
+    List<AttendanceSummary> findByPayrollPeriodIdAndStatus(UUID payrollPeriodId, AttendanceSummary.Status status);
+    
+    @Query("SELECT a FROM AttendanceSummary a WHERE a.payrollPeriod.id = :payrollPeriodId AND a.status = :status AND a.isDeleted = :isDeleted")
+    List<AttendanceSummary> findByPayrollPeriodIdAndStatusAndIsDeleted(
+        @Param("payrollPeriodId") UUID payrollPeriodId,
+        @Param("status") AttendanceSummary.Status status,
+        @Param("isDeleted") Boolean isDeleted
+    );
+    
     @Query("SELECT a FROM AttendanceSummary a WHERE a.payrollPeriod.id = :payrollPeriodId AND a.employee.id = :employeeId")
     Optional<AttendanceSummary> findByPayrollPeriodAndEmployee(
         @Param("payrollPeriodId") UUID payrollPeriodId,
         @Param("employeeId") UUID employeeId
     );
+
 }

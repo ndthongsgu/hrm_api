@@ -14,7 +14,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
-import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -43,12 +42,6 @@ public class PayslipController {
     @RequirePermission(module = "PAYROLL", action = PermissionDefinition.READ)
     public ResponseEntity<BaseResponse<Payslip>> getById(@PathVariable java.util.UUID id) {
         return ResponseEntity.ok(BaseResponse.ok(service.findById(id)));
-    }
-
-    @PostMapping("/generate/{payrollPeriodId}")
-    @RequirePermission(module = "PAYROLL", action = PermissionDefinition.CREATE)
-    public ResponseEntity<BaseResponse<List<Payslip>>> generate(@PathVariable UUID payrollPeriodId) {
-        return ResponseEntity.ok(BaseResponse.ok(service.generateForPayrollPeriod(payrollPeriodId)));
     }
 
     /**

@@ -40,13 +40,6 @@ public class AttendanceSummaryController {
         return ResponseEntity.ok(BaseResponse.ok(service.findById(id)));
     }
 
-    @PostMapping("/create")
-    @RequirePermission(module = "PAYROLL", action = PermissionDefinition.CREATE)
-    public ResponseEntity<BaseResponse<AttendanceSummary>> create(@Valid @RequestBody AttendanceSummaryCreateRequest request) {
-        AttendanceSummary created = service.create(request);
-        return ResponseEntity.ok(BaseResponse.ok(created));
-    }
-
     @PutMapping("/{id}")
     @RequirePermission(module = "PAYROLL", action = PermissionDefinition.UPDATE)
     public ResponseEntity<BaseResponse<AttendanceSummary>> update(@PathVariable UUID id, @Valid @RequestBody AttendanceSummaryCreateRequest request) {
@@ -79,6 +72,16 @@ public class AttendanceSummaryController {
     public ResponseEntity<BaseResponse<String>> approve(@PathVariable UUID id) {
         service.approve(id);
         return ResponseEntity.ok(BaseResponse.ok("Duyệt công thành công"));
+    }
+
+     /**
+     * Hủy Duyệt công
+     */
+    @PostMapping("/{id}/unApprove")
+    @RequirePermission(module = "PAYROLL", action = PermissionDefinition.APPROVE)
+    public ResponseEntity<BaseResponse<String>> unApprove(@PathVariable UUID id) {
+        service.unApprove(id);
+        return ResponseEntity.ok(BaseResponse.ok("Hủy duyệt công thành công"));
     }
 
 }

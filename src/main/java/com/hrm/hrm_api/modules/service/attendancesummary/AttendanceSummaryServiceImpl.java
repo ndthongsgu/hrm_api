@@ -27,12 +27,16 @@ public class AttendanceSummaryServiceImpl implements AttendanceSummaryService {
     private final ActionLogUtil actionLogUtil;
     private final SecurityUtil securityUtil;
 
-    public AttendanceSummaryServiceImpl(AttendanceSummaryRepository repository, ActionLogUtil actionLogUtil, SecurityUtil securityUtil) {
+    public AttendanceSummaryServiceImpl(AttendanceSummaryRepository repository, ActionLogUtil actionLogUtil,
+            SecurityUtil securityUtil) {
         this.repository = repository;
         this.actionLogUtil = actionLogUtil;
         this.securityUtil = securityUtil;
     }
 
+    /**
+     * Tìm tổng hợp công theo ID
+     */
     @Override
     public AttendanceSummary findById(UUID id) {
         return repository.findById(id).orElseThrow(() -> new ResourceNotFoundException(AttendanceSummary.class, id));
@@ -48,30 +52,13 @@ public class AttendanceSummaryServiceImpl implements AttendanceSummaryService {
                 id,
                 "ATTENDANCE_SUMMARY",
                 "Xóa tổng hợp chấm công: " + id,
-                securityUtil.getCurrentUsername()
-        );
+                securityUtil.getCurrentUsername());
         repository.deleteById(id);
     }
 
-    @Override
-    @Transactional
-    public AttendanceSummary create(AttendanceSummaryCreateRequest request) {
-        PayrollPeriod payrollPeriod = new PayrollPeriod();
-        payrollPeriod.setId(request.getPayrollPeriodId());
-
-        Employee employee = new Employee();
-        employee.setId(request.getEmployeeId());
-
-        AttendanceSummary entity = new AttendanceSummary();
-        entity.setPayrollPeriod(payrollPeriod);
-        entity.setEmployee(employee);
-        entity.setActualWorkingDays(request.getActualWorkingDays());
-        entity.setPaidLeaveDays(request.getPaidLeaveDays());
-        entity.setUnpaidLeaveDays(request.getUnpaidLeaveDays());
-        entity.setOvertimeHours(request.getOvertimeHours());
-        return repository.save(entity);
-    }
-
+    /**
+     * Cập nhật tổng hợp công
+     */
     @Override
     @Transactional
     public AttendanceSummary update(UUID id, AttendanceSummaryCreateRequest request) {
@@ -92,23 +79,17 @@ public class AttendanceSummaryServiceImpl implements AttendanceSummaryService {
         return repository.save(entity);
     }
 
-    @Override
-    public Page<AttendanceSummary> findAll(Pageable pageable) {
-        return findAll(null, pageable);
-    }
-
-    @Override
-    public Page<AttendanceSummary> findAll(AttendanceSummaryFilter filter, Pageable pageable) {
-        return repository.findAll(buildSpec(filter), pageable);
-    }
-
+    /**
+     * Lấy tất cả tổng hợp công với phân trang
+     */
     private Specification<AttendanceSummary> buildSpec(AttendanceSummaryFilter filter) {
         return (root, query, cb) -> {
             var predicates = cb.conjunction();
 
             if (filter != null) {
                 if (filter.getPayrollPeriodId() != null) {
-                    predicates = cb.and(predicates, cb.equal(root.get("payrollPeriod").get("id"), filter.getPayrollPeriodId()));
+                    predicates = cb.and(predicates,
+                            cb.equal(root.get("payrollPeriod").get("id"), filter.getPayrollPeriodId()));
                 }
                 if (filter.getEmployeeId() != null) {
                     predicates = cb.and(predicates, cb.equal(root.get("employee").get("id"), filter.getEmployeeId()));
@@ -118,7 +99,13 @@ public class AttendanceSummaryServiceImpl implements AttendanceSummaryService {
                 }
                 if (filter.getStatus() != null) {
                     predicates = cb.and(predicates, cb.equal(root.get("status"), filter.getStatus()));
+                } else {
+                    predicates = cb.and(predicates,
+                            cb.or(cb.isNull(root.get("isDeleted")), cb.isFalse(root.get("isDeleted"))));
                 }
+            } else {
+                predicates = cb.and(predicates,
+                        cb.or(cb.isNull(root.get("isDeleted")), cb.isFalse(root.get("isDeleted"))));
             }
 
             return predicates;
@@ -132,15 +119,14 @@ public class AttendanceSummaryServiceImpl implements AttendanceSummaryService {
         Page<AttendanceSummary> page = repository.findAll(buildSpec(filter), pageable);
 
         return PaginationResponse.of(
-            page.getContent(),
-            page.getTotalElements(),
-            page.getNumber(),
-            page.getSize()
-        );
+                page.getContent(),
+                page.getTotalElements(),
+                page.getNumber(),
+                page.getSize());
     }
 
     /**
-     * Duyệt điều chỉnh lương
+     * Duyệt công
      */
     @Override
     @Transactional
@@ -153,28 +139,67 @@ public class AttendanceSummaryServiceImpl implements AttendanceSummaryService {
 
         repository.save(attendanceSummary);
 
-
         actionLogUtil.logUpdate(
                 id,
                 "ATTENDANCE_SUMMARY",
-                "Duyệt công: " + attendanceSummary.getPayrollPeriod().getName(),
+                "Duyệt công nhân viên: " + attendanceSummary.getEmployee().getEmployeeCode(),
                 securityUtil.getCurrentUsername());
     }
 
+    /**
+     * Hủy duyệt công
+     */
+    @Override
+    @Transactional
+    public void unApprove(UUID id) {
+        AttendanceSummary attendanceSummary = repository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(AttendanceSummary.class, id));
 
+        // Đánh dấu hủy duyệt
+        attendanceSummary.setStatus(AttendanceSummary.Status.PENDING);
+
+        repository.save(attendanceSummary);
+
+        actionLogUtil.logCancel(
+                id,
+                "ATTENDANCE_SUMMARY",
+                "Hủy duyệt công nhân viên: " + attendanceSummary.getEmployee().getEmployeeCode(),
+                securityUtil.getCurrentUsername());
+    }
+
+    /**
+     * Ngừng hoạt động tổng hợp công (soft delete)
+     * Đảnh dấu isDeleted = true
+     */
     @Override
     @Transactional
     public void deactivate(UUID id) {
         AttendanceSummary entity = findById(id);
         entity.setIsDeleted(true);
         repository.save(entity);
+
+        actionLogUtil.logDeactivate(
+                id,
+                "ATTENDANCE_SUMMARY",
+                "Ngừng hoạt động tổng hợp công nhân viên: " + entity.getEmployee().getEmployeeCode(),
+                securityUtil.getCurrentUsername());
     }
 
+    /**
+     * Kích hoạt lại tổng hợp công (khôi phục từ soft delete)
+     * Đảnh dấu isDeleted = false
+     */
     @Override
     @Transactional
     public void activate(UUID id) {
         AttendanceSummary entity = findById(id);
         entity.setIsDeleted(false);
         repository.save(entity);
+
+         actionLogUtil.logActivate(
+                id,
+                "ATTENDANCE_SUMMARY",
+                "Kích hoạt tổng hợp công nhân viên: " + entity.getEmployee().getEmployeeCode(),
+                securityUtil.getCurrentUsername());
     }
 }

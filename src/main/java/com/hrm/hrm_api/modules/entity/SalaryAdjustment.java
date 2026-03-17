@@ -34,10 +34,12 @@ public class SalaryAdjustment extends BaseEntity {
     private Boolean isNetOnly = false;
 
     @Enumerated(EnumType.STRING)
-    private Status status = Status.PENDING; // e.g., "APPROVED",  "PENDING", "LOCKED"
+    private Status status = Status.PENDING; // e.g., "APPROVED",  "PENDING"
+
+    private String reason;
 
     public enum Status {
-        APPROVED, PENDING, LOCKED
+        APPROVED, PENDING
     }
 
     public enum Type {
