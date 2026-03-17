@@ -23,7 +23,7 @@ public class PayrollPeriod extends BaseEntity {
     private Float standardWorkingDays;
 
     @Enumerated(EnumType.STRING)
-    private Status status = Status.PENDING; // e.g., "APPROVED", "REJECTED", "PENDING", "LOCKED"
+    private Status status = Status.PENDING; // e.g., "APPROVED", "PENDING"
 
     public enum Status {
         APPROVED, PENDING

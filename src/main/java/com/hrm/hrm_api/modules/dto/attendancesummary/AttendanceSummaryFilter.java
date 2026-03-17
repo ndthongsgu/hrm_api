@@ -10,6 +10,6 @@ import com.hrm.hrm_api.modules.entity.AttendanceSummary;
 public class AttendanceSummaryFilter {
     private UUID payrollPeriodId;
     private UUID employeeId;
-    private AttendanceSummary.Status status; // APPROVED, REJECTED, PENDING, LOCKED;
+    private AttendanceSummary.Status status; // APPROVED, PENDING, LOCKED;
     private Boolean isDeleted;
 }
