@@ -98,4 +98,13 @@ public class PayrollPeriodController {
         service.unApprove(id);
         return ResponseEntity.ok(BaseResponse.ok("Hủy duyệt kỳ lương thành công"));
     }
+
+    /**
+     * Selectbox kỳ lương cho app mobile (Chỉ lấy nhưng kỳ lương đã duyệt)
+     */
+    @GetMapping("/mobile-select-options")
+    public ResponseEntity<BaseResponse<List<SelectOptionDto>>> getMobileSelectOptions() {
+        List<SelectOptionDto> options = service.getMobileSelectOptions();
+        return ResponseEntity.ok(BaseResponse.ok(options));
+    }
 }

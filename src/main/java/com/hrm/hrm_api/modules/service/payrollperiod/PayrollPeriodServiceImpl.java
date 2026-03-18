@@ -316,4 +316,13 @@ public class PayrollPeriodServiceImpl implements PayrollPeriodService {
                 "Hủy duyệt kỳ lương: " + period.getName(),
                 securityUtil.getCurrentUsername());
     }
+
+    @Override
+    public List<SelectOptionDto> getMobileSelectOptions() {
+        List<PayrollPeriod> payrollPeriods = repository.findAllByIsDeletedAndStatusOrderByCreatedAtDesc(false,
+                PayrollPeriod.Status.APPROVED);
+        return payrollPeriods.stream()
+                .map(period -> new SelectOptionDto(period.getId(), period.getName()))
+                .collect(Collectors.toList());
+    }
 }

@@ -7,15 +7,17 @@ public class JwtResponse {
     private String refreshToken;
     private String type = "Bearer";
     private String id;
+    private String employeeId;
     private String username;
     private String email;
     private List<String> roles;
     private Boolean isAdmin;
 
-    public JwtResponse(String accessToken, String refreshToken, String id, String username, String email, List<String> roles, Boolean isAdmin) {
+    public JwtResponse(String accessToken, String refreshToken, String id, String employeeId, String username, String email, List<String> roles, Boolean isAdmin) {
         this.accessToken = accessToken;
         this.refreshToken = refreshToken;
         this.id = id;
+        this.employeeId = employeeId;
         this.username = username;
         this.email = email;
         this.roles = roles;
@@ -23,10 +25,11 @@ public class JwtResponse {
     }
 
     // Constructor without refreshToken for backward compatibility
-    public JwtResponse(String accessToken, String id, String username, String email, List<String> roles, Boolean isAdmin) {
+    public JwtResponse(String accessToken, String id, String employeeId, String username, String email, List<String> roles, Boolean isAdmin) {
         this.accessToken = accessToken;
         this.refreshToken = null;
         this.id = id;
+        this.employeeId = employeeId;
         this.username = username;
         this.email = email;
         this.roles = roles;
@@ -55,6 +58,14 @@ public class JwtResponse {
 
     public void setId(String id) {
         this.id = id;
+    }
+
+    public String getEmployeeId() {
+        return employeeId;
+    }
+
+    public void setEmployeeId(String employeeId) {
+        this.employeeId = employeeId;
     }
 
     public String getEmail() {

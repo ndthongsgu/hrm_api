@@ -56,9 +56,11 @@ public class AuthController {
         Optional<User> userOpt = userRepository.findById(userDetails.getId());
         java.util.List<String> roleNames = new ArrayList<>();
         Boolean isAdmin = false;
+        String employeeId = null;
         if (userOpt.isPresent()) {
             User user = userOpt.get();
             isAdmin = Boolean.TRUE.equals(user.getIsAdmin());
+            employeeId = user.getEmployeeId() != null ? user.getEmployeeId().toString() : null;
             if (user.getRoles() != null) {
                 roleNames = user.getRoles().stream()
                         .map(Role::getName)
@@ -67,7 +69,7 @@ public class AuthController {
             }
         }
 
-        return ResponseEntity.ok(new JwtResponse(jwt, refreshToken, userDetails.getId().toString(), userDetails.getUsername(), userDetails.getEmail(), roleNames, isAdmin));
+        return ResponseEntity.ok(new JwtResponse(jwt, refreshToken, userDetails.getId().toString(), employeeId, userDetails.getUsername(), userDetails.getEmail(), roleNames, isAdmin));
     }
 
     @PostMapping("/refresh")
@@ -108,9 +110,11 @@ public class AuthController {
             Optional<User> userOpt = userRepository.findById(userDetailsImpl.getId());
             java.util.List<String> roleNames = new ArrayList<>();
             Boolean isAdmin = false;
+            String employeeId = null;
             if (userOpt.isPresent()) {
                 User user = userOpt.get();
                 isAdmin = Boolean.TRUE.equals(user.getIsAdmin());
+                employeeId = user.getEmployeeId() != null ? user.getEmployeeId().toString() : null;
                 if (user.getRoles() != null) {
                     roleNames = user.getRoles().stream()
                             .map(Role::getName)
@@ -123,6 +127,7 @@ public class AuthController {
                     newAccessToken,
                     newRefreshToken,
                     userDetailsImpl.getId().toString(),
+                    employeeId,
                     username,
                     userDetailsImpl.getEmail(),
                     roleNames,

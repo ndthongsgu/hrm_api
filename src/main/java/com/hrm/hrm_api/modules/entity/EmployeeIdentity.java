@@ -22,13 +22,9 @@ public class EmployeeIdentity extends BaseEntity {
     @JsonBackReference("employee-identities")
     private Employee employee;
 
-    private String identityType; // QR_CODE, FACE_VECTOR, RFID_CARD
-
     private String identityValue;
 
     private String imageUrl;
-
-    private Boolean isActive = true;
 
     @UpdateTimestamp
     private LocalDateTime updatedAt;

@@ -86,4 +86,9 @@ public class PayslipController {
         return ResponseEntity.ok(BaseResponse.ok("Duyệt phiếu lương thành công"));
     }
 
+    // Lấy phiếu lương của một nhân viên trong kỳ lương cụ thể (API cho app mobile)
+    @GetMapping("/employee/{employeeId}/payroll-period/{payrollPeriodId}")
+    public ResponseEntity<BaseResponse<Payslip>> getByEmployeeAndPayrollPeriod(@PathVariable UUID employeeId, @PathVariable UUID payrollPeriodId) {
+        return ResponseEntity.ok(BaseResponse.ok(service.findByEmployeeAndPayrollPeriod(employeeId, payrollPeriodId)));
+    }
 }

@@ -8,6 +8,7 @@ import lombok.ToString;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 
 import java.util.Set;
+import java.util.UUID;
 import java.util.HashSet;
 import java.util.stream.Collectors;
 
@@ -33,6 +34,9 @@ public class User extends BaseEntity {
     @ManyToOne
     @JoinColumn(name = "employee_id")
     private Employee employee; // optional link to employee
+
+    @Column(name = "employee_id", insertable = false, updatable = false)
+    private UUID employeeId;
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @JsonManagedReference(value = "user-userRoles")

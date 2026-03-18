@@ -55,4 +55,9 @@ public class Employee extends BaseEntity {
     @OneToMany(mappedBy = "employee", cascade = CascadeType.ALL)
     @JsonManagedReference("employee-identities")
     private List<EmployeeIdentity> identities;
+
+    // Vị trí chấm công của nhân viên
+    @ManyToOne
+    @JoinColumn(name = "office_location_id")
+    private OfficeLocation officeLocation;
 }
