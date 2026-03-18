@@ -4,10 +4,8 @@ import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
-import org.hibernate.annotations.CreationTimestamp;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "payslips")
@@ -19,67 +17,67 @@ public class Payslip extends BaseEntity {
 
     @ManyToOne
     @JoinColumn(name = "payroll_period_id")
-    private PayrollPeriod payrollPeriod;
+    private PayrollPeriod payrollPeriod; // Kỳ lương
 
     @ManyToOne
     @JoinColumn(name = "employee_id")
-    private Employee employee;
+    private Employee employee; // Nhân viên
 
     @ManyToOne
     @JoinColumn(name = "contract_id")
-    private Contract contract;
+    private Contract contract; // Hợp đồng
 
-    // 1. Income
+    // 1. Income - DOANH THU
     @Column(precision = 15, scale = 2)
-    private BigDecimal grossSalary;
-
-    @Column(precision = 15, scale = 2)
-    private BigDecimal salaryByWorkdays;
+    private BigDecimal grossSalary; // Lương cơ bản
 
     @Column(precision = 15, scale = 2)
-    private BigDecimal totalAllowance;
+    private BigDecimal salaryByWorkdays; // Lương theo ngày công
 
     @Column(precision = 15, scale = 2)
-    private BigDecimal totalBonus;
-
-    // 2. Insurance
-    @Column(precision = 15, scale = 2)
-    private BigDecimal bhxhSalaryBase;
+    private BigDecimal totalAllowance; // Tổng phụ cấp
 
     @Column(precision = 15, scale = 2)
-    private BigDecimal bhxhAmount;
+    private BigDecimal totalBonus; // Tổng thưởng (thưởng - phạt)
+
+    // 2. Insurance - BẢO HIỂM
+    @Column(precision = 15, scale = 2)
+    private BigDecimal bhxhSalaryBase; // Căn cứ tính BHXH
 
     @Column(precision = 15, scale = 2)
-    private BigDecimal bhytAmount;
+    private BigDecimal bhxhAmount; // Bảo hiểm xã hội (8%)
 
     @Column(precision = 15, scale = 2)
-    private BigDecimal bhtnAmount;
+    private BigDecimal bhytAmount; // Bảo hiểm y tế (2%)
 
     @Column(precision = 15, scale = 2)
-    private BigDecimal socialInsuranceBenefitAmount;
-
-    // 3. Tax
-    @Column(precision = 15, scale = 2)
-    private BigDecimal taxableIncome;
+    private BigDecimal bhtnAmount; // Bảo hiểm thất nghiệp (1%)
 
     @Column(precision = 15, scale = 2)
-    private BigDecimal deductionPersonal;
+    private BigDecimal socialInsuranceBenefitAmount; // Trợ cấp BHXH
+
+    // 3. Tax - THUẾ
+    @Column(precision = 15, scale = 2)
+    private BigDecimal taxableIncome; // Thu nhập chịu thuế
 
     @Column(precision = 15, scale = 2)
-    private BigDecimal deductionDependents;
+    private BigDecimal deductionPersonal; // Giảm trừ cá nhân
 
     @Column(precision = 15, scale = 2)
-    private BigDecimal assessableIncome;
+    private BigDecimal deductionDependents; // Giảm trừ người phụ thuộc
 
     @Column(precision = 15, scale = 2)
-    private BigDecimal taxAmount;
+    private BigDecimal assessableIncome; // Thu nhập tính thuế
 
-    // 4. Net
     @Column(precision = 15, scale = 2)
-    private BigDecimal netSalary;
+    private BigDecimal taxAmount; // Tiền thuế TNCN
+
+    // 4. Net - THỰC NHÂN
+    @Column(precision = 15, scale = 2)
+    private BigDecimal netSalary; // Lương ròng (thực nhận)
 
     @Enumerated(EnumType.STRING)
-    private Status status = Status.PENDING; // e.g., "APPROVED",  "PENDING"
+    private Status status = Status.PENDING; // Trạng thái (PENDING/APPROVED)
 
     public enum Status {
         APPROVED, PENDING

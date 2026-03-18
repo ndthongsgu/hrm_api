@@ -28,4 +28,9 @@ public interface SalaryAdjustmentRepository extends JpaRepository<SalaryAdjustme
         @Param("payrollPeriodId") UUID payrollPeriodId
     );
 
+    @Query("SELECT sa FROM SalaryAdjustment sa WHERE sa.payrollPeriod.id = :payrollPeriodId AND sa.isDeleted = :isDeleted")
+    List<SalaryAdjustment> findByPayrollPeriodAndIsDeleted(
+        @Param("payrollPeriodId") UUID payrollPeriodId,
+        @Param("isDeleted") Boolean isDeleted
+    );
 }

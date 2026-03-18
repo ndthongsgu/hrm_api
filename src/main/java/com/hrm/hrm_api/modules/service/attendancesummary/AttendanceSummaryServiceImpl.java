@@ -9,7 +9,9 @@ import com.hrm.hrm_api.modules.dto.request.AttendanceSummarySearchRequest;
 import com.hrm.hrm_api.modules.entity.AttendanceSummary;
 import com.hrm.hrm_api.modules.entity.Employee;
 import com.hrm.hrm_api.modules.entity.PayrollPeriod;
+import com.hrm.hrm_api.modules.entity.Payslip;
 import com.hrm.hrm_api.modules.repository.AttendanceSummaryRepository;
+import com.hrm.hrm_api.modules.repository.PayslipRepository;
 import com.hrm.hrm_api.modules.util.ActionLogUtil;
 
 import org.springframework.data.domain.Page;
@@ -18,6 +20,7 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -26,12 +29,14 @@ public class AttendanceSummaryServiceImpl implements AttendanceSummaryService {
     private final AttendanceSummaryRepository repository;
     private final ActionLogUtil actionLogUtil;
     private final SecurityUtil securityUtil;
+    private final PayslipRepository payslipRepository;
 
     public AttendanceSummaryServiceImpl(AttendanceSummaryRepository repository, ActionLogUtil actionLogUtil,
-            SecurityUtil securityUtil) {
+            SecurityUtil securityUtil, PayslipRepository payslipRepository) {
         this.repository = repository;
         this.actionLogUtil = actionLogUtil;
         this.securityUtil = securityUtil;
+        this.payslipRepository = payslipRepository;
     }
 
     /**
@@ -154,7 +159,10 @@ public class AttendanceSummaryServiceImpl implements AttendanceSummaryService {
     public void unApprove(UUID id) {
         AttendanceSummary attendanceSummary = repository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(AttendanceSummary.class, id));
-
+        List<Payslip> payslips = payslipRepository.findByPayrollPeriodAndIsDeleted(attendanceSummary.getPayrollPeriod().getId(), false);
+        if (!payslips.isEmpty()) {
+            throw new IllegalStateException("Không thể hủy duyệt công khi đã có phiếu lương liên quan.");
+        }
         // Đánh dấu hủy duyệt
         attendanceSummary.setStatus(AttendanceSummary.Status.PENDING);
 

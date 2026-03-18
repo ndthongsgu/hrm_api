@@ -10,7 +10,6 @@ import java.util.UUID;
 
 public interface SalaryAdjustmentService {
     SalaryAdjustment findById(UUID id);
-    void delete(UUID id);
     SalaryAdjustment create(SalaryAdjustmentCreateRequest request);
     SalaryAdjustment update(UUID id, SalaryAdjustmentCreateRequest request);
     PaginationResponse<SalaryAdjustment> search(SalaryAdjustmentSearchRequest request, Pageable pageable);

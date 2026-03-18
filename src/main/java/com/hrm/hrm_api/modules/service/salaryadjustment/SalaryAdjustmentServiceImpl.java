@@ -9,6 +9,8 @@ import com.hrm.hrm_api.modules.dto.salaryadjustment.SalaryAdjustmentFilter;
 import com.hrm.hrm_api.modules.entity.SalaryAdjustment;
 import com.hrm.hrm_api.modules.entity.Employee;
 import com.hrm.hrm_api.modules.entity.PayrollPeriod;
+import com.hrm.hrm_api.modules.entity.Payslip;
+import com.hrm.hrm_api.modules.repository.PayslipRepository;
 import com.hrm.hrm_api.modules.repository.SalaryAdjustmentRepository;
 import com.hrm.hrm_api.modules.util.ActionLogUtil;
 import jakarta.persistence.EntityManager;
@@ -24,13 +26,15 @@ import java.util.UUID;
 public class SalaryAdjustmentServiceImpl implements SalaryAdjustmentService {
 
     private final SalaryAdjustmentRepository repository;
+    private final PayslipRepository payslipRepository;
     private final EntityManager entityManager;
     private final ActionLogUtil actionLogUtil;
     private final SecurityUtil securityUtil;
 
-    public SalaryAdjustmentServiceImpl(SalaryAdjustmentRepository repository, EntityManager entityManager,
+    public SalaryAdjustmentServiceImpl(SalaryAdjustmentRepository repository, PayslipRepository payslipRepository, EntityManager entityManager,
             ActionLogUtil actionLogUtil, SecurityUtil securityUtil) {
         this.repository = repository;
+        this.payslipRepository = payslipRepository;
         this.entityManager = entityManager;
         this.actionLogUtil = actionLogUtil;
         this.securityUtil = securityUtil;
@@ -42,15 +46,6 @@ public class SalaryAdjustmentServiceImpl implements SalaryAdjustmentService {
     @Override
     public SalaryAdjustment findById(UUID id) {
         return repository.findById(id).orElseThrow(() -> new ResourceNotFoundException(SalaryAdjustment.class, id));
-    }
-
-    @Override
-    @Transactional
-    public void delete(UUID id) {
-        if (!repository.existsById(id)) {
-            throw new ResourceNotFoundException(SalaryAdjustment.class, id);
-        }
-        repository.deleteById(id);
     }
 
     /**
@@ -247,7 +242,6 @@ public class SalaryAdjustmentServiceImpl implements SalaryAdjustmentService {
 
         repository.save(adjustment);
 
-
         actionLogUtil.logUpdate(
                 id,
                 "SALARY_ADJUSTMENT",
@@ -263,12 +257,15 @@ public class SalaryAdjustmentServiceImpl implements SalaryAdjustmentService {
     public void unApprove(UUID id) {
         SalaryAdjustment adjustment = repository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(SalaryAdjustment.class, id));
-
+        Payslip payslip = payslipRepository.findByPayrollPeriodAndEmployeeAndIsDeleted(adjustment.getPayrollPeriod().getId(), adjustment.getEmployee().getId(), false);
+        if (payslip != null) {
+            throw new IllegalStateException(
+                    "Không thể hủy duyệt khi đã có phiếu lương liên quan");
+        }
         // Đánh dấu hủy duyệt
         adjustment.setStatus(SalaryAdjustment.Status.PENDING);
 
         repository.save(adjustment);
-
 
         actionLogUtil.logCancel(
                 id,

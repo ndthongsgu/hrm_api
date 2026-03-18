@@ -25,10 +25,11 @@ public class PayrollPeriodServiceImpl implements PayrollPeriodService {
     private final PayrollPeriodRepository repository;
     private final EmployeeRepository employeeRepository;
     private final AttendanceSummaryRepository attendanceSummaryRepository;
+    private final SalaryAdjustmentRepository salaryAdjustmentRepository;
     private final DailyAttendanceRepository dailyAttendanceRepository;
+    private final PayslipRepository payslipRepository;
     private final ActionLogUtil actionLogUtil;
     private final SecurityUtil securityUtil;
-
 
     public PayrollPeriodServiceImpl(
             PayrollPeriodRepository repository,
@@ -48,6 +49,8 @@ public class PayrollPeriodServiceImpl implements PayrollPeriodService {
         this.employeeRepository = employeeRepository;
         this.attendanceSummaryRepository = attendanceSummaryRepository;
         this.dailyAttendanceRepository = dailyAttendanceRepository;
+        this.salaryAdjustmentRepository = salaryAdjustmentRepository;
+        this.payslipRepository = payslipRepository;
         this.actionLogUtil = actionLogUtil;
         this.securityUtil = securityUtil;
     }
@@ -66,14 +69,14 @@ public class PayrollPeriodServiceImpl implements PayrollPeriodService {
         // Fetch existing entity from DB to maintain version for optimistic locking
         PayrollPeriod existing = repository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(PayrollPeriod.class, id));
-        
+
         // Update only the fields that should be changed
         existing.setName(entity.getName());
         existing.setStartDate(entity.getStartDate());
         existing.setEndDate(entity.getEndDate());
         existing.setStandardWorkingDays(entity.getStandardWorkingDays());
         existing.setStatus(entity.getStatus());
-        
+
         PayrollPeriod updated = repository.save(existing);
 
         actionLogUtil.logUpdate(
@@ -83,15 +86,6 @@ public class PayrollPeriodServiceImpl implements PayrollPeriodService {
                 securityUtil.getCurrentUsername());
 
         return updated;
-    }
-
-    @Override
-    @Transactional
-    public void delete(UUID id) {
-        if (!repository.existsById(id)) {
-            throw new ResourceNotFoundException(PayrollPeriod.class, id);
-        }
-        repository.deleteById(id);
     }
 
     private Specification<PayrollPeriod> buildSpec(PayrollPeriodFilter filter) {
@@ -119,7 +113,7 @@ public class PayrollPeriodServiceImpl implements PayrollPeriodService {
                 if (filter.getIsDeleted() != null) {
                     predicates = cb.and(predicates, cb.equal(root.get("isDeleted"), filter.getIsDeleted()));
                 }
-            } 
+            }
             return predicates;
         };
     }
@@ -139,7 +133,8 @@ public class PayrollPeriodServiceImpl implements PayrollPeriodService {
 
     @Override
     public List<SelectOptionDto> getSelectOptions() {
-        List<PayrollPeriod> payrollPeriods = repository.findAllByIsDeletedAndStatusOrderByCreatedAtDesc(false, PayrollPeriod.Status.APPROVED);
+        List<PayrollPeriod> payrollPeriods = repository.findAllByIsDeletedAndStatusOrderByCreatedAtDesc(false,
+                PayrollPeriod.Status.APPROVED);
         return payrollPeriods.stream()
                 .map(period -> new SelectOptionDto(period.getId(), period.getName()))
                 .collect(Collectors.toList());
@@ -188,26 +183,26 @@ public class PayrollPeriodServiceImpl implements PayrollPeriodService {
                     .isEmpty()) {
                 // Tính tổng công từ DailyAttendance
                 Long actualWorkingDaysCount = dailyAttendanceRepository.countActualWorkingDays(
-                        employee.getId(), 
-                        period.getStartDate(), 
+                        employee.getId(),
+                        period.getStartDate(),
                         period.getEndDate());
                 float actualWorkingDays = actualWorkingDaysCount != null ? actualWorkingDaysCount.floatValue() : 0f;
 
                 Long paidLeaveDaysCount = dailyAttendanceRepository.countPaidLeaveDays(
-                        employee.getId(), 
-                        period.getStartDate(), 
+                        employee.getId(),
+                        period.getStartDate(),
                         period.getEndDate());
                 float paidLeaveDays = paidLeaveDaysCount != null ? paidLeaveDaysCount.floatValue() : 0f;
 
                 Long unpaidLeaveDaysCount = dailyAttendanceRepository.countUnpaidLeaveDays(
-                        employee.getId(), 
-                        period.getStartDate(), 
+                        employee.getId(),
+                        period.getStartDate(),
                         period.getEndDate());
                 float unpaidLeaveDays = unpaidLeaveDaysCount != null ? unpaidLeaveDaysCount.floatValue() : 0f;
 
                 Double overtimeHoursValue = dailyAttendanceRepository.sumOvertimeHours(
-                        employee.getId(), 
-                        period.getStartDate(), 
+                        employee.getId(),
+                        period.getStartDate(),
                         period.getEndDate());
                 float overtimeHours = overtimeHoursValue != null ? overtimeHoursValue.floatValue() : 0f;
 
@@ -226,12 +221,12 @@ public class PayrollPeriodServiceImpl implements PayrollPeriodService {
                 actionLogUtil.logCreate(
                         summary.getId(),
                         "ATTENDANCE_SUMMARY",
-                        "Tạo tổng hợp công cho nhân viên: " + employee.getFullName() + " - Kỳ lương: " + period.getName(),
+                        "Tạo tổng hợp công cho nhân viên: " + employee.getFullName() + " - Kỳ lương: "
+                                + period.getName(),
                         securityUtil.getCurrentUsername());
             }
         }
     }
-
 
     /**
      * Soft delete: Deactivate payroll period
@@ -240,7 +235,6 @@ public class PayrollPeriodServiceImpl implements PayrollPeriodService {
     public void deactivate(UUID payrollPeriodId) {
         PayrollPeriod period = repository.findById(payrollPeriodId)
                 .orElseThrow(() -> new RuntimeException("PayrollPeriod not found"));
-
         period.setIsDeleted(true);
         repository.save(period);
 
@@ -278,7 +272,6 @@ public class PayrollPeriodServiceImpl implements PayrollPeriodService {
         PayrollPeriod period = repository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(PayrollPeriod.class, id));
 
-
         // Đánh dấu duyệt
         period.setStatus(PayrollPeriod.Status.APPROVED);
 
@@ -299,7 +292,18 @@ public class PayrollPeriodServiceImpl implements PayrollPeriodService {
     public void unApprove(UUID id) {
         PayrollPeriod period = repository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(PayrollPeriod.class, id));
-
+        // Kiểm tra nếu đã có payslip, salaryAdjustment liên quan thì không cho hủy
+        // duyệt
+        List<Payslip> payslip = payslipRepository.findByPayrollPeriodAndIsDeleted(period.getId(), false);
+        List<SalaryAdjustment> salaryAdjustment = salaryAdjustmentRepository.findByPayrollPeriodAndIsDeleted(period.getId(), false);
+        if (!payslip.isEmpty()) {
+            throw new IllegalStateException(
+                    "Không thể hủy duyệt khi đã có phiếu lương liên quan");
+        }
+        if (!salaryAdjustment.isEmpty()) {
+            throw new IllegalStateException(
+                    "Không thể hủy duyệt khi đã có điều chỉnh lương liên quan");
+        }
 
         // Đánh dấu hủy duyệt
         period.setStatus(PayrollPeriod.Status.PENDING);

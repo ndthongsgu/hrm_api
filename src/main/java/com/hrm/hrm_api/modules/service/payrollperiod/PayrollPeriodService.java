@@ -14,7 +14,6 @@ public interface PayrollPeriodService {
     PayrollPeriod findById(UUID id);
     PayrollPeriod create(PayrollPeriod entity);
     PayrollPeriod update(UUID id, PayrollPeriod entity);
-    void delete(UUID id);
     List<SelectOptionDto> getSelectOptions();
     void activate(UUID payrollPeriodId);
     void deactivate(UUID payrollPeriodId);

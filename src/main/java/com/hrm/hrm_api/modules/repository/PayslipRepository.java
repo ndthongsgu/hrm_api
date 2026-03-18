@@ -6,15 +6,23 @@ import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 public interface PayslipRepository extends JpaRepository<Payslip, UUID>, JpaSpecificationExecutor<Payslip> {
 	Optional<Payslip> findByPayrollPeriodIdAndEmployeeId(UUID payrollPeriodId, UUID employeeId);
     
-    @Query("SELECT p FROM Payslip p WHERE p.payrollPeriod.id = :payrollPeriodId AND p.employee.id = :employeeId")
-    Optional<Payslip> findByPayrollPeriodAndEmployee(
+    @Query("SELECT p FROM Payslip p WHERE p.payrollPeriod.id = :payrollPeriodId AND p.employee.id = :employeeId AND p.isDeleted = :isDeleted")
+    Payslip findByPayrollPeriodAndEmployeeAndIsDeleted(
         @Param("payrollPeriodId") UUID payrollPeriodId,
-        @Param("employeeId") UUID employeeId
+        @Param("employeeId") UUID employeeId,
+        @Param("isDeleted") boolean isDeleted
+    );
+
+    @Query("SELECT p FROM Payslip p WHERE p.payrollPeriod.id = :payrollPeriodId AND p.isDeleted = :isDeleted")
+    List<Payslip> findByPayrollPeriodAndIsDeleted(
+        @Param("payrollPeriodId") UUID payrollPeriodId,
+        @Param("isDeleted") boolean isDeleted
     );
 }

@@ -213,8 +213,8 @@ public class PayslipServiceImpl implements PayslipService {
     @Transactional
     public Payslip generateForEmployee(UUID payrollPeriodId, UUID employeeId) {
         // Kiểm tra payslip đã tồn tại chưa - MUST BE FIRST
-        Optional<Payslip> existingPayslip = payslipRepository.findByPayrollPeriodIdAndEmployeeId(payrollPeriodId, employeeId);
-        if (existingPayslip.isPresent()) {
+        Payslip existingPayslip = payslipRepository.findByPayrollPeriodAndEmployeeAndIsDeleted(payrollPeriodId, employeeId, false);
+        if (existingPayslip != null) {
             throw new IllegalStateException("Payslip đã tồn tại cho nhân viên này trong kỳ lương này. Vui lòng cập nhật thay vì tạo mới.");
         }
 
@@ -239,8 +239,8 @@ public class PayslipServiceImpl implements PayslipService {
         }
         Contract contract = contractOpt.get();
 
-        BigDecimal personalDeduction = getSettingValue("pit_deduction_personal", calculationDate);
-        BigDecimal dependentDeductionUnit = getSettingValue("pit_deduction_dependent", calculationDate);
+        // Giảm trừ người phụ thuộc từ system settings
+        BigDecimal dependentDeductionUnit = getSettingValue("PHU_CAP_NGUOI_PHU_THUOC", calculationDate);
 
         BigDecimal grossSalary = nvl(contract.getActualSalary());
         BigDecimal standardDays = toDecimal(period.getStandardWorkingDays() == null ? 26F : period.getStandardWorkingDays());
@@ -278,10 +278,10 @@ public class PayslipServiceImpl implements PayslipService {
         BigDecimal incomeBeforeInsurance = salaryByWorkdays.add(totalAllowance).add(totalBonus);
 
         BigDecimal baseSalary = nvl(contract.getBaseSalary());
-        BigDecimal bhxhBase = calculateInsuranceBase(baseSalary, "SOCIAL", calculationDate);
-        BigDecimal socialRate = getInsuranceEmployeeRate("SOCIAL", calculationDate);
-        BigDecimal healthRate = getInsuranceEmployeeRate("HEALTH", calculationDate);
-        BigDecimal unemploymentRate = getInsuranceEmployeeRate("UNEMPLOYMENT", calculationDate);
+        BigDecimal bhxhBase = calculateInsuranceBase(baseSalary, "BHXH", calculationDate);
+        BigDecimal socialRate = getInsuranceEmployeeRate("BHXH", calculationDate);
+        BigDecimal healthRate = getInsuranceEmployeeRate("BHYT", calculationDate);
+        BigDecimal unemploymentRate = getInsuranceEmployeeRate("BHTN", calculationDate);
 
         BigDecimal bhxhAmount = percent(bhxhBase, socialRate);
         BigDecimal bhytAmount = percent(bhxhBase, healthRate);
@@ -290,6 +290,14 @@ public class PayslipServiceImpl implements PayslipService {
 
         long dependentCount = dependentRepository.countByEmployeeIdAndIsQualifiedTrueAndIsDeletedFalse(employeeId);
         BigDecimal deductionDependents = dependentDeductionUnit.multiply(BigDecimal.valueOf(dependentCount));
+
+        // Giảm trừ cá nhân: Mỗi người 11 triệu/năm (theo luật Việt Nam) = 916,666.67/tháng
+        // Hoặc lấy từ system settings nếu có
+        BigDecimal personalDeduction = getSettingValue("GIAM_TRU_CA_NHAN", calculationDate);
+        if (personalDeduction.compareTo(ZERO) <= 0) {
+            // Mặc định: 11 triệu/năm ÷ 12 tháng
+            personalDeduction = BigDecimal.valueOf(916_666.67).setScale(2, RoundingMode.HALF_UP);
+        }
 
         BigDecimal taxableIncome = salaryByWorkdays
                 .add(taxableAllowance)
@@ -385,9 +393,16 @@ public class PayslipServiceImpl implements PayslipService {
         InsuranceConfig cfg = cfgOpt.get();
         BigDecimal capBase;
         if ("REGION_MIN".equalsIgnoreCase(cfg.getCapBaseType())) {
-            capBase = getSettingValue("region_min_salary_v1", date);
+            // Căn cứ lương tối thiểu khu vực
+            capBase = getSettingValue("LUONG_TOI_THIEU", date);
         } else {
-            capBase = getSettingValue("reference_salary", date);
+            // Căn cứ lương tối đa tính bảo hiểm
+            capBase = getSettingValue("LUONG_TOI_DA_BHXH", date);
+        }
+
+        // Nếu không tìm thấy capBase, dùng baseSalary
+        if (capBase.compareTo(ZERO) <= 0) {
+            return nvl(baseSalary);
         }
 
         BigDecimal cap = capBase.multiply(BigDecimal.valueOf(cfg.getCapMultiplier() == null ? 1 : cfg.getCapMultiplier()));
@@ -423,7 +438,7 @@ public class PayslipServiceImpl implements PayslipService {
 
     private BigDecimal sumByType(List<SalaryAdjustment> adjustments, String type) {
         return adjustments.stream()
-                .filter(a -> type.equals(a.getType()))
+                .filter(a -> a.getType() != null && type.equals(a.getType().name()))
                 .map(a -> nvl(a.getAmount()))
                 .reduce(ZERO, BigDecimal::add);
     }
@@ -434,9 +449,12 @@ public class PayslipServiceImpl implements PayslipService {
 
     private BigDecimal normalizeRate(BigDecimal rate) {
         BigDecimal normalized = nvl(rate);
-        if (normalized.compareTo(BigDecimal.ONE) > 0) {
+        // Database lưu tỷ lệ dưới dạng phần trăm (1, 2, 8, ...)
+        // Nếu >= 1, chia cho 100 để chuyển thành decimal (0.01, 0.02, 0.08, ...)
+        if (normalized.compareTo(BigDecimal.ONE) >= 0) {
             return normalized.divide(BigDecimal.valueOf(100), 6, RoundingMode.HALF_UP);
         }
+        // Nếu đã là decimal (0 < x < 1), return as is
         return normalized;
     }
 
