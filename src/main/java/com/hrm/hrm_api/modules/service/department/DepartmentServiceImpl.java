@@ -61,9 +61,7 @@ public class DepartmentServiceImpl implements DepartmentService {
         return departmentRepository.findByFilters(
                 filters.getCode(),
                 filters.getName(),
-                filters.getManagerId(),
-                filters.getParentDepartmentId(),
-                filters.getIsActive(),
+            filters.getParentDepartmentId(),
                 pageable
         );
     }

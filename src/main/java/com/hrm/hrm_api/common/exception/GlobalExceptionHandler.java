@@ -16,6 +16,7 @@ import org.springframework.transaction.TransactionException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import java.time.Instant;
 import java.util.stream.Collectors;
@@ -134,6 +135,13 @@ public class GlobalExceptionHandler {
     public ResponseEntity<BaseResponse<Object>> handleIllegalArgument(IllegalArgumentException ex) {
         return new ResponseEntity<>(
                 BaseResponse.error("Tham số không hợp lệ: " + ex.getMessage()),
+                HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<BaseResponse<Object>> handleMethodArgumentTypeMismatch(MethodArgumentTypeMismatchException ex) {
+        return new ResponseEntity<>(
+                BaseResponse.error("Tham số không hợp lệ: " + ex.getValue()),
                 HttpStatus.BAD_REQUEST);
     }
 

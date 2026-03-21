@@ -45,9 +45,24 @@ public class EmployeeServiceImpl implements EmployeeService {
     @Override
     @Transactional
     public Employee update(UUID id, Employee entity) {
-        findById(id);
-        entity.setId(id);
-        return employeeRepository.save(entity);
+        Employee existing = findById(id);
+        existing.setFullName(entity.getFullName());
+        existing.setEmployeeCode(entity.getEmployeeCode());
+        existing.setEmail(entity.getEmail());
+        existing.setPhone(entity.getPhone());
+        existing.setDepartment(entity.getDepartment());
+        existing.setPosition(entity.getPosition());
+        existing.setTaxCode(entity.getTaxCode());
+        existing.setBankAccount(entity.getBankAccount());
+        existing.setBankName(entity.getBankName());
+        existing.setStatus(entity.getStatus());
+        existing.setOfficeLocation(entity.getOfficeLocation());
+
+        if (entity.getIsDeleted() != null) {
+            existing.setIsDeleted(entity.getIsDeleted());
+        }
+
+        return employeeRepository.save(existing);
     }
 
     @Override

@@ -2,17 +2,18 @@ package com.hrm.hrm_api.modules.controller;
 
 import com.hrm.hrm_api.modules.dto.base.BaseResponse;
 import com.hrm.hrm_api.modules.dto.base.PageResponse;
+import com.hrm.hrm_api.modules.dto.base.SelectOptionDto;
 import com.hrm.hrm_api.modules.dto.request.DepartmentSearchRequest;
 import com.hrm.hrm_api.modules.entity.Department;
 import com.hrm.hrm_api.modules.service.department.DepartmentService;
 import com.hrm.hrm_api.modules.util.PaginationUtils;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/departments")
@@ -40,7 +41,17 @@ public class DepartmentController {
         return ResponseEntity.ok(BaseResponse.ok(PaginationUtils.toPageResponse(page)));
     }
 
-    @GetMapping("/{id}")
+    @GetMapping("/select")
+    public ResponseEntity<BaseResponse<List<SelectOptionDto>>> getSelectOptions() {
+        List<SelectOptionDto> options = departmentService.findAll(org.springframework.data.domain.Pageable.unpaged())
+                .getContent()
+                .stream()
+                .map(department -> new SelectOptionDto(department.getId(), department.getCode() + " - " + department.getName()))
+                .toList();
+        return ResponseEntity.ok(BaseResponse.ok(options));
+    }
+
+    @GetMapping("/{id:[0-9a-fA-F\\-]{36}}")
     public ResponseEntity<BaseResponse<Department>> getById(@PathVariable java.util.UUID id) {
         return ResponseEntity.ok(BaseResponse.ok(departmentService.findById(id)));
     }
