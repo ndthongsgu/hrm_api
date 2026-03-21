@@ -85,16 +85,22 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<BaseResponse<Object>> handleDataIntegrityViolation(DataIntegrityViolationException ex) {
-        String message = ex.getMessage();
-        if (message != null && message.contains("unique")) {
+        String message = bestMessage(ex);
+        String lower = message.toLowerCase();
+        if (lower.contains("unique")) {
             return new ResponseEntity<>(
                     BaseResponse.error("Bản ghi này đã tồn tại. Vui lòng sử dụng giá trị khác."),
                     HttpStatus.CONFLICT);
         }
-        if (message != null && message.contains("foreign key")) {
+        if (lower.contains("foreign key")) {
             return new ResponseEntity<>(
                     BaseResponse.error("Không thể xóa hoặc sửa bản ghi này do có dữ liệu liên quan."),
                     HttpStatus.CONFLICT);
+        }
+        if (lower.contains("not-null") || lower.contains("null value")) {
+            return new ResponseEntity<>(
+                    BaseResponse.error("Thiếu dữ liệu bắt buộc: " + message),
+                    HttpStatus.BAD_REQUEST);
         }
         return new ResponseEntity<>(
                 BaseResponse.error("Vi phạm tính toàn vẹn dữ liệu: " + message),
@@ -107,7 +113,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(DataAccessException.class)
     public ResponseEntity<BaseResponse<Object>> handleDataAccess(DataAccessException ex) {
         return new ResponseEntity<>(
-                BaseResponse.error("Lỗi cơ sở dữ liệu: " + ex.getMessage()),
+                BaseResponse.error("Lỗi cơ sở dữ liệu: " + bestMessage(ex)),
                 HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
@@ -116,8 +122,9 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(TransactionException.class)
     public ResponseEntity<BaseResponse<Object>> handleTransaction(TransactionException ex) {
+        String detail = bestMessage(ex);
         return new ResponseEntity<>(
-                BaseResponse.error("Lỗi giao dịch: " + ex.getMessage()),
+            BaseResponse.error("Lỗi giao dịch: " + detail),
                 HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
@@ -161,10 +168,26 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ResponseEntity<BaseResponse<Object>> handleGeneric(Exception ex) {
         ex.printStackTrace();
-        // Trả lại error message từ Exception để dễ debug
-        String errorMessage = ex.getMessage() != null ? ex.getMessage() : "Đã xảy ra lỗi không mong muốn";
         return new ResponseEntity<>(
-                BaseResponse.error("Lỗi máy chủ nội bộ: " + errorMessage),
+                BaseResponse.error("Lỗi máy chủ nội bộ: " + bestMessage(ex)),
                 HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+    private String bestMessage(Throwable ex) {
+        Throwable root = getRootCause(ex);
+        String rootMessage = root != null ? root.getMessage() : null;
+        if (rootMessage != null && !rootMessage.isBlank()) {
+            return rootMessage;
+        }
+        String message = ex.getMessage();
+        return message != null && !message.isBlank() ? message : "Đã xảy ra lỗi không mong muốn";
+    }
+
+    private Throwable getRootCause(Throwable throwable) {
+        Throwable result = throwable;
+        while (result != null && result.getCause() != null && result.getCause() != result) {
+            result = result.getCause();
+        }
+        return result;
     }
 }

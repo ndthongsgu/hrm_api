@@ -5,7 +5,11 @@ import com.hrm.hrm_api.modules.dto.base.PaginationResponse;
 import com.hrm.hrm_api.modules.dto.base.SelectOptionDto;
 import com.hrm.hrm_api.modules.dto.request.EmployeeSearchRequest;
 import com.hrm.hrm_api.modules.entity.Employee;
+import com.hrm.hrm_api.modules.entity.Department;
+import com.hrm.hrm_api.modules.entity.Position;
+import com.hrm.hrm_api.modules.repository.DepartmentRepository;
 import com.hrm.hrm_api.modules.repository.EmployeeRepository;
+import com.hrm.hrm_api.modules.repository.PositionRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -21,9 +25,17 @@ import java.util.stream.Collectors;
 public class EmployeeServiceImpl implements EmployeeService {
 
     private final EmployeeRepository employeeRepository;
+    private final DepartmentRepository departmentRepository;
+    private final PositionRepository positionRepository;
 
-    public EmployeeServiceImpl(EmployeeRepository repository) {
+    public EmployeeServiceImpl(
+            EmployeeRepository repository,
+            DepartmentRepository departmentRepository,
+            PositionRepository positionRepository
+    ) {
         this.employeeRepository = repository;
+        this.departmentRepository = departmentRepository;
+        this.positionRepository = positionRepository;
     }
 
     @Override
@@ -39,19 +51,56 @@ public class EmployeeServiceImpl implements EmployeeService {
     @Override
     @Transactional
     public Employee create(Employee entity) {
+        Department resolvedDepartment = resolveDepartment(entity);
+        if (resolvedDepartment != null) {
+            entity.setDepartment(resolvedDepartment);
+        }
+
+        Position resolvedPosition = resolvePosition(entity);
+        if (resolvedPosition != null) {
+            entity.setPosition(resolvedPosition);
+        }
+
+        if (entity.getIsDeleted() == null) {
+            entity.setIsDeleted(false);
+        }
         return employeeRepository.save(entity);
     }
 
     @Override
     @Transactional
     public Employee update(UUID id, Employee entity) {
+        employeeRepository.normalizeNullVersion(id);
         Employee existing = findById(id);
+
         existing.setFullName(entity.getFullName());
         existing.setEmployeeCode(entity.getEmployeeCode());
         existing.setEmail(entity.getEmail());
         existing.setPhone(entity.getPhone());
-        existing.setDepartment(entity.getDepartment());
-        existing.setPosition(entity.getPosition());
+        existing.setEmergencyContact(entity.getEmergencyContact());
+        existing.setEmergencyPhone(entity.getEmergencyPhone());
+        existing.setSocialInsuranceNumber(entity.getSocialInsuranceNumber());
+        existing.setHealthInsuranceNumber(entity.getHealthInsuranceNumber());
+        existing.setAddress(entity.getAddress());
+        existing.setGender(entity.getGender());
+        existing.setDateOfBirth(entity.getDateOfBirth());
+        existing.setHireDate(entity.getHireDate());
+        existing.setNotes(entity.getNotes());
+
+        Department resolvedDepartment = resolveDepartment(entity);
+        if (resolvedDepartment != null) {
+            existing.setDepartment(resolvedDepartment);
+        } else if (entity.getDepartment() != null) {
+            existing.setDepartment(entity.getDepartment());
+        }
+
+        Position resolvedPosition = resolvePosition(entity);
+        if (resolvedPosition != null) {
+            existing.setPosition(resolvedPosition);
+        } else if (entity.getPosition() != null) {
+            existing.setPosition(entity.getPosition());
+        }
+
         existing.setTaxCode(entity.getTaxCode());
         existing.setBankAccount(entity.getBankAccount());
         existing.setBankName(entity.getBankName());
@@ -117,5 +166,29 @@ public class EmployeeServiceImpl implements EmployeeService {
         return employees.stream()
                 .map(employee -> new SelectOptionDto(employee.getId(), employee.getEmployeeCode() + " - " + employee.getFullName()))
                 .collect(Collectors.toList());
+    }
+
+    private Department resolveDepartment(Employee entity) {
+        if (entity.getDepartment() != null && entity.getDepartment().getId() != null) {
+            return departmentRepository.findById(entity.getDepartment().getId())
+                    .orElseThrow(() -> new ResourceNotFoundException(Department.class, entity.getDepartment().getId()));
+        }
+        if (entity.getDepartmentId() != null) {
+            return departmentRepository.findById(entity.getDepartmentId())
+                    .orElseThrow(() -> new ResourceNotFoundException(Department.class, entity.getDepartmentId()));
+        }
+        return null;
+    }
+
+    private Position resolvePosition(Employee entity) {
+        if (entity.getPosition() != null && entity.getPosition().getId() != null) {
+            return positionRepository.findById(entity.getPosition().getId())
+                    .orElseThrow(() -> new ResourceNotFoundException(Position.class, entity.getPosition().getId()));
+        }
+        if (entity.getPositionId() != null) {
+            return positionRepository.findById(entity.getPositionId())
+                    .orElseThrow(() -> new ResourceNotFoundException(Position.class, entity.getPositionId()));
+        }
+        return null;
     }
 }
