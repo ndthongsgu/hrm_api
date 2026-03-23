@@ -3,7 +3,9 @@ package com.hrm.hrm_api.modules.service.position;
 import com.hrm.hrm_api.common.exception.ResourceNotFoundException;
 import com.hrm.hrm_api.modules.dto.base.PaginationResponse;
 import com.hrm.hrm_api.modules.dto.request.PositionSearchRequest;
+import com.hrm.hrm_api.modules.entity.Department;
 import com.hrm.hrm_api.modules.entity.Position;
+import com.hrm.hrm_api.modules.repository.DepartmentRepository;
 import com.hrm.hrm_api.modules.repository.PositionRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -18,9 +20,11 @@ import java.util.UUID;
 public class PositionServiceImpl implements PositionService {
 
     private final PositionRepository positionRepository;
+    private final DepartmentRepository departmentRepository;
 
-    public PositionServiceImpl(PositionRepository repository) {
+    public PositionServiceImpl(PositionRepository repository, DepartmentRepository departmentRepository) {
         this.positionRepository = repository;
+        this.departmentRepository = departmentRepository;
     }
 
     @Override
@@ -42,9 +46,27 @@ public class PositionServiceImpl implements PositionService {
     @Override
     @Transactional
     public Position update(UUID id, Position entity) {
-        findById(id);
-        entity.setId(id);
-        return positionRepository.save(entity);
+        positionRepository.normalizeNullVersion(id);
+        Position existing = findById(id);
+
+        existing.setName(entity.getName());
+        existing.setCode(entity.getCode());
+        existing.setStandardResponsibilityAllowance(entity.getStandardResponsibilityAllowance());
+
+        if (entity.getDepartment() == null || entity.getDepartment().getId() == null) {
+            existing.setDepartment(null);
+        } else {
+            var departmentId = entity.getDepartment().getId();
+            Department department = departmentRepository.findById(departmentId)
+                    .orElseThrow(() -> new ResourceNotFoundException(Department.class, departmentId));
+            existing.setDepartment(department);
+        }
+
+        if (entity.getIsDeleted() != null) {
+            existing.setIsDeleted(entity.getIsDeleted());
+        }
+
+        return positionRepository.save(existing);
     }
 
     @Override

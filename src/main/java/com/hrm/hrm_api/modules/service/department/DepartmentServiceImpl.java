@@ -39,9 +39,26 @@ public class DepartmentServiceImpl implements DepartmentService {
     @Override
     @Transactional
     public Department update(UUID id, Department entity) {
-        findById(id);
-        entity.setId(id);
-        return departmentRepository.save(entity);
+        departmentRepository.normalizeNullVersion(id);
+        Department existing = findById(id);
+
+        existing.setName(entity.getName());
+        existing.setCode(entity.getCode());
+
+        if (entity.getParent() == null || entity.getParent().getId() == null) {
+            existing.setParent(null);
+        } else {
+            UUID parentId = entity.getParent().getId();
+            Department parent = departmentRepository.findById(parentId)
+                    .orElseThrow(() -> new ResourceNotFoundException(Department.class, parentId));
+            existing.setParent(parent);
+        }
+
+        if (entity.getIsDeleted() != null) {
+            existing.setIsDeleted(entity.getIsDeleted());
+        }
+
+        return departmentRepository.save(existing);
     }
 
     @Override
