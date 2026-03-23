@@ -35,6 +35,12 @@ public class Payslip extends BaseEntity {
     private BigDecimal salaryByWorkdays; // Lương theo ngày công
 
     @Column(precision = 15, scale = 2)
+    private BigDecimal workdays; // Số ngày công thực tế
+
+    @Column(precision = 15, scale = 2)
+    private BigDecimal totalWorkdays; // Tổng số ngày công trong kỳ
+
+    @Column(precision = 15, scale = 2)
     private BigDecimal taxableAndInsurableAllowance; // Phụ cấp chịu thuế và tính bảo hiểm
 
     @Column(precision = 15, scale = 2)
@@ -84,6 +90,9 @@ public class Payslip extends BaseEntity {
 
     @Column(precision = 15, scale = 2)
     private BigDecimal assessableIncome; // Thu nhập tính thuế
+
+    @Column(precision = 15, scale = 2)
+    private BigDecimal taxRate; // Phần trăm thuế suất
 
     @Column(precision = 15, scale = 2)
     private BigDecimal taxAmount; // Tiền thuế TNCN

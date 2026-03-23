@@ -373,6 +373,8 @@ public class PayslipServiceImpl implements PayslipService {
         payslip.setEmployee(summary.getEmployee()); // Nhân viên
         payslip.setContract(contract); // Hợp đồng
         payslip.setSalaryByWorkdays(salaryByWorkdays); // Lương thanh toán theo công
+        payslip.setWorkdays(actualDays); // Công thực tế
+        payslip.setTotalWorkdays(standardDays); // Tổng số ngày công trong kỳ
         payslip.setGrossSalary(grossSalary); // Lương cơ sở
         payslip.setBhxhSalaryBase(bhxhSalaryBase); // Lương tính bảo hiểm
         payslip.setTaxableAndInsurableAllowance(taxableAndInsurableAllowance);// Phụ cấp chịu thuế và tính bảo hiểm
@@ -392,6 +394,7 @@ public class PayslipServiceImpl implements PayslipService {
         payslip.setTotalDeductions(totalDeductions); // Tổng giảm trừ
         payslip.setTaxAmount(taxAmount); // Thuế TNCN
         payslip.setNetSalary(netSalary); // Lương thực nhận
+        payslip.setCreatedBy(securityUtil.getCurrentUsername()); // Người tạo bảng lương
 
         Payslip savedPayslip = payslipRepository.save(payslip);
 
@@ -435,36 +438,6 @@ public class PayslipServiceImpl implements PayslipService {
                 .map(this::nvl)
                 .orElse(ZERO);
         return normalizeRate(rate);
-    }
-
-    private BigDecimal calculateInsuranceBase(BigDecimal baseSalary, String type, LocalDate date) {
-        Optional<InsuranceConfig> cfgOpt = insuranceConfigRepository
-                .findTopByTypeAndEffectiveDateLessThanEqualOrderByEffectiveDateDesc(type, date);
-        if (cfgOpt.isEmpty()) {
-            cfgOpt = insuranceConfigRepository.findTopByTypeOrderByCreatedAtDesc(type);
-        }
-        if (cfgOpt.isEmpty()) {
-            return nvl(baseSalary);
-        }
-
-        InsuranceConfig cfg = cfgOpt.get();
-        BigDecimal capBase;
-        if ("REGION_MIN".equalsIgnoreCase(cfg.getCapBaseType())) {
-            // Căn cứ lương tối thiểu khu vực
-            capBase = getSettingValue("LUONG_TOI_THIEU", date);
-        } else {
-            // Căn cứ lương tối đa tính bảo hiểm
-            capBase = getSettingValue("LUONG_TOI_DA_BHXH", date);
-        }
-
-        // Nếu không tìm thấy capBase, dùng baseSalary
-        if (capBase.compareTo(ZERO) <= 0) {
-            return nvl(baseSalary);
-        }
-
-        BigDecimal cap = capBase
-                .multiply(BigDecimal.valueOf(cfg.getCapMultiplier() == null ? 1 : cfg.getCapMultiplier()));
-        return nvl(baseSalary).min(cap).setScale(2, RoundingMode.HALF_UP);
     }
 
     private BigDecimal calculatePit(BigDecimal assessableIncome, LocalDate effectiveDate) {
