@@ -35,10 +35,22 @@ public class Payslip extends BaseEntity {
     private BigDecimal salaryByWorkdays; // Lương theo ngày công
 
     @Column(precision = 15, scale = 2)
-    private BigDecimal totalAllowance; // Tổng phụ cấp
+    private BigDecimal taxableAndInsurableAllowance; // Phụ cấp chịu thuế và tính bảo hiểm
 
     @Column(precision = 15, scale = 2)
-    private BigDecimal totalBonus; // Tổng thưởng (thưởng - phạt)
+    private BigDecimal taxableAndNonInsurableAllowance; // Phụ cấp chịu thuế và không tính bảo hiểm
+
+    @Column(precision = 15, scale = 2)
+    private BigDecimal nonTaxableAndInsurableAllowance; // Phụ cấp không chịu thuế và tính bảo hiểm
+
+    @Column(precision = 15, scale = 2)
+    private BigDecimal nonTaxableAndNonInsurableAllowance; // Phụ cấp không chịu thuế và không tính bảo hiểm
+
+    @Column(precision = 15, scale = 2)
+    private BigDecimal totalBonus; // Tổng thưởng/phạt tính thuế (bao gồm cả thưởng và phạt, nếu có)
+
+    @Column(precision = 15, scale = 2)
+    private BigDecimal totalBonusNonTax; // Tổng thưởng/phạt không tính thuế (bao gồm cả thưởng và phạt, nếu có)
 
     // 2. Insurance - BẢO HIỂM
     @Column(precision = 15, scale = 2)
@@ -53,9 +65,6 @@ public class Payslip extends BaseEntity {
     @Column(precision = 15, scale = 2)
     private BigDecimal bhtnAmount; // Bảo hiểm thất nghiệp (1%)
 
-    @Column(precision = 15, scale = 2)
-    private BigDecimal socialInsuranceBenefitAmount; // Trợ cấp BHXH
-
     // 3. Tax - THUẾ
     @Column(precision = 15, scale = 2)
     private BigDecimal taxableIncome; // Thu nhập chịu thuế
@@ -65,6 +74,13 @@ public class Payslip extends BaseEntity {
 
     @Column(precision = 15, scale = 2)
     private BigDecimal deductionDependents; // Giảm trừ người phụ thuộc
+
+    @Column(precision = 15, scale = 2)
+    private BigDecimal taxFixedDeduction; // Giảm trừ cố định
+
+    // Tổng giảm trừ
+    @Column(precision = 15, scale = 2)
+    private BigDecimal totalDeductions; // Tổng giảm trừ
 
     @Column(precision = 15, scale = 2)
     private BigDecimal assessableIncome; // Thu nhập tính thuế
