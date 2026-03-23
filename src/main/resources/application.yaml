@@ -14,7 +14,17 @@ spring:
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 50MB
+      max-request-size: 100MB
 hrm:
   app:
     jwtSecret: vP2r7b9bEw3xH1v7m0y2sQ8fQfL8nXGk5ZtK2mYyZ3s=
     jwtExpirationMs: 86400000
+
+# Python API Configuration for Known Face Recognition
+python-api:
+  base-url: http://localhost:8000
+  known-face-endpoint: /api/add_known_face

@@ -143,7 +143,7 @@ public class PayslipServiceImpl implements PayslipService {
 
     @Override
     public Payslip findByEmployeeAndPayrollPeriod(UUID employeeId, UUID payrollPeriodId) {
-        return payslipRepository.findByPayrollPeriodAndEmployeeAndIsDeleted(payrollPeriodId, employeeId, false);
+        return payslipRepository.findByPayrollPeriodAndEmployeeAndApprovedStatus(payrollPeriodId, employeeId, false);
     }
 
     @Override

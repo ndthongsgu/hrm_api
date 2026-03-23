@@ -4,38 +4,61 @@ import com.hrm.hrm_api.common.exception.ResourceNotFoundException;
 import com.hrm.hrm_api.modules.dto.base.PaginationResponse;
 import com.hrm.hrm_api.modules.dto.base.SelectOptionDto;
 import com.hrm.hrm_api.modules.dto.request.EmployeeSearchRequest;
+import com.hrm.hrm_api.modules.dto.response.KnownFaceUploadResponseDto;
 import com.hrm.hrm_api.modules.entity.Employee;
 import com.hrm.hrm_api.modules.entity.Department;
 import com.hrm.hrm_api.modules.entity.Position;
 import com.hrm.hrm_api.modules.repository.DepartmentRepository;
 import com.hrm.hrm_api.modules.repository.EmployeeRepository;
 import com.hrm.hrm_api.modules.repository.PositionRepository;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.ByteArrayResource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.RestTemplate;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
+@Slf4j
 public class EmployeeServiceImpl implements EmployeeService {
 
     private final EmployeeRepository employeeRepository;
     private final DepartmentRepository departmentRepository;
     private final PositionRepository positionRepository;
+    private final RestTemplate restTemplate;
+
+    @Value("${python-api.base-url:http://localhost:8000}")
+    private String pythonApiBaseUrl;
+
+    @Value("${python-api.known-face-endpoint:/api/add_known_face}")
+    private String knownFaceEndpoint;
 
     public EmployeeServiceImpl(
             EmployeeRepository repository,
             DepartmentRepository departmentRepository,
-            PositionRepository positionRepository
+            PositionRepository positionRepository,
+            RestTemplate restTemplate
     ) {
         this.employeeRepository = repository;
         this.departmentRepository = departmentRepository;
         this.positionRepository = positionRepository;
+        this.restTemplate = restTemplate;
     }
 
     @Override
@@ -190,5 +213,78 @@ public class EmployeeServiceImpl implements EmployeeService {
                     .orElseThrow(() -> new ResourceNotFoundException(Position.class, entity.getPositionId()));
         }
         return null;
+    }
+
+    @Override
+    public KnownFaceUploadResponseDto uploadKnownFaces(String employeeId, List<MultipartFile> files) {
+        if (employeeId == null || employeeId.trim().isEmpty()) {
+            throw new IllegalArgumentException("Employee ID is required");
+        }
+
+        if (files == null || files.isEmpty()) {
+            throw new IllegalArgumentException("At least one file is required");
+        }
+
+        try {
+            // Build multipart request
+            MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
+            body.add("employee_id", employeeId);
+
+            // Add all files
+            for (MultipartFile file : files) {
+                if (!file.isEmpty()) {
+                    body.add("files", new ByteArrayResource(file.getBytes()) {
+                        @Override
+                        public String getFilename() {
+                            return file.getOriginalFilename();
+                        }
+                    });
+                }
+            }
+
+            // Set headers
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.MULTIPART_FORM_DATA);
+
+            HttpEntity<MultiValueMap<String, Object>> request = new HttpEntity<>(body, headers);
+
+            // Call Python API
+            String url = pythonApiBaseUrl + knownFaceEndpoint;
+            log.info("Calling Python API: {} for employee: {} with {} files", url, employeeId, files.size());
+
+            ResponseEntity<KnownFaceUploadResponseDto> response = restTemplate.postForEntity(
+                    url,
+                    request,
+                    KnownFaceUploadResponseDto.class
+            );
+
+            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+                log.info("Successfully uploaded known faces for employee: {} - Status: {}", 
+                        employeeId, response.getBody().getStatus());
+                return response.getBody();
+            } else {
+                throw new RuntimeException("Failed to upload known faces: Invalid response from Python API");
+            }
+
+        } catch (HttpClientErrorException e) {
+            log.error("HTTP error calling Python API for employee {}: {} - {}", 
+                    employeeId, e.getStatusCode(), e.getResponseBodyAsString());
+            throw new RuntimeException(
+                    "Failed to upload known faces: " + e.getMessage(),
+                    e
+            );
+        } catch (java.io.IOException e) {
+            log.error("IO error while processing files for employee {}: {}", employeeId, e.getMessage());
+            throw new RuntimeException(
+                    "Failed to process uploaded files: " + e.getMessage(),
+                    e
+            );
+        } catch (Exception e) {
+            log.error("Unexpected error uploading known faces for employee {}: {}", employeeId, e.getMessage());
+            throw new RuntimeException(
+                    "Failed to upload known faces: " + e.getMessage(),
+                    e
+            );
+        }
     }
 }
