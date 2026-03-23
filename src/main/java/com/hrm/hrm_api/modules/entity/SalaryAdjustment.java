@@ -43,6 +43,6 @@ public class SalaryAdjustment extends BaseEntity {
     }
 
     public enum Type {
-        BONUS, FINE, ADVANCE, BHXH_BENEFIT,
+        BONUS, FINE, ADVANCE
     }
 }

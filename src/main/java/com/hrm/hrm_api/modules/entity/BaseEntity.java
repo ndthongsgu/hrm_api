@@ -27,19 +27,19 @@ public abstract class BaseEntity {
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
-    private LocalDateTime createdAt;
+    private LocalDateTime createdAt = LocalDateTime.now();
 
     @UpdateTimestamp
     @Column(name = "updated_at")
-    private LocalDateTime updatedAt;
+    private LocalDateTime updatedAt = LocalDateTime.now();
 
     @CreatedBy
     @Column(name = "created_by")
-    private String createdBy;
+    private String createdBy = "system"; 
 
     @LastModifiedBy
     @Column(name = "updated_by")
-    private String updatedBy;
+    private String updatedBy = "system"; 
 
     @Version
     private Long version;

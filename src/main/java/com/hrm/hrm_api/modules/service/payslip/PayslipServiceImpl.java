@@ -107,9 +107,8 @@ public class PayslipServiceImpl implements PayslipService {
 
                 if (employeeName != null && !employeeName.isEmpty()) {
                     predicates = cb.and(predicates, cb.like(
-                        cb.lower(root.get("employee").get("name")),
-                        "%" + employeeName.toLowerCase() + "%"
-                    ));
+                            cb.lower(root.get("employee").get("name")),
+                            "%" + employeeName.toLowerCase() + "%"));
                 }
 
                 if (payrollPeriodId != null && !payrollPeriodId.isEmpty()) {
@@ -144,7 +143,7 @@ public class PayslipServiceImpl implements PayslipService {
 
     @Override
     public Payslip findByEmployeeAndPayrollPeriod(UUID employeeId, UUID payrollPeriodId) {
-        return payslipRepository.findByPayrollPeriodAndEmployeeAndIsDeleted(payrollPeriodId, employeeId, false);
+        return payslipRepository.findByPayrollPeriodAndEmployeeAndApprovedStatus(payrollPeriodId, employeeId, false);
     }
 
     @Override
@@ -183,7 +182,7 @@ public class PayslipServiceImpl implements PayslipService {
         payslip.setIsDeleted(false);
         payslipRepository.save(payslip);
 
-         actionLogUtil.logActivate(
+        actionLogUtil.logActivate(
                 id,
                 "PAYSLIP",
                 "Kích hoạt bảng lương nhân viên: " + payslip.getEmployee().getEmployeeCode(),
@@ -206,31 +205,40 @@ public class PayslipServiceImpl implements PayslipService {
 
     /**
      * Tạo bảng lương cho một nhân viên cụ thể trong một kỳ lương
-     * Yêu cầu: 
+     * Yêu cầu:
      * - Kỳ lương phải được duyệt (APPROVED) và không bị xóa (isDeleted=false)
      * - Tổng hợp công phải được duyệt (APPROVED) và không bị xóa (isDeleted=false)
      * - Hợp đồng phải hoạt động (ACTIVE) và không bị xóa (isDeleted=false)
      * - Phụ cấp phải không bị xóa (isDeleted=false)
-     * - Điều chỉnh lương phải được duyệt (APPROVED) và không bị xóa (isDeleted=false)
-     * - Người phụ thuộc phải đủ điều kiện (isQualified=true) và không bị xóa (isDeleted=false)
+     * - Điều chỉnh lương phải được duyệt (APPROVED) và không bị xóa
+     * (isDeleted=false)
+     * - Người phụ thuộc phải đủ điều kiện (isQualified=true) và không bị xóa
+     * (isDeleted=false)
      */
     @Override
     @Transactional
     public Payslip generateForEmployee(UUID payrollPeriodId, UUID employeeId) {
         // Kiểm tra payslip đã tồn tại chưa - MUST BE FIRST
-        Payslip existingPayslip = payslipRepository.findByPayrollPeriodAndEmployeeAndIsDeleted(payrollPeriodId, employeeId, false);
+        Payslip existingPayslip = payslipRepository.findByPayrollPeriodAndEmployeeAndIsDeleted(payrollPeriodId,
+                employeeId, false);
         if (existingPayslip != null) {
-            throw new IllegalStateException("Payslip đã tồn tại cho nhân viên này trong kỳ lương này. Vui lòng cập nhật thay vì tạo mới.");
+            throw new IllegalStateException(
+                    "Payslip đã tồn tại cho nhân viên này trong kỳ lương này. Vui lòng cập nhật thay vì tạo mới.");
         }
 
-        PayrollPeriod period = payrollPeriodRepository.findByIdAndStatusAndIsDeleted(payrollPeriodId, PayrollPeriod.Status.APPROVED, false)
-                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy kỳ lương hoặc kỳ lương chưa được duyệt: " + payrollPeriodId));
+        // Kỳ lương
+        PayrollPeriod period = payrollPeriodRepository
+                .findByIdAndStatusAndIsDeleted(payrollPeriodId, PayrollPeriod.Status.APPROVED, false)
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Không tìm thấy kỳ lương hoặc kỳ lương chưa được duyệt: " + payrollPeriodId));
 
-        List<AttendanceSummary> summaries = attendanceSummaryRepository.findByPayrollPeriodIdAndStatusAndIsDeleted(payrollPeriodId, AttendanceSummary.Status.APPROVED, false);
+        List<AttendanceSummary> summaries = attendanceSummaryRepository
+                .findByPayrollPeriodIdAndStatusAndIsDeleted(payrollPeriodId, AttendanceSummary.Status.APPROVED, false);
         AttendanceSummary summary = summaries.stream()
                 .filter(s -> s.getEmployee() != null && s.getEmployee().getId().equals(employeeId))
                 .findFirst()
-                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy tổng hợp công cho nhân viên: " + employeeId));
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Không tìm thấy tổng hợp công cho nhân viên: " + employeeId));
 
         if (summary.getEmployee() == null) {
             throw new IllegalArgumentException("Dữ liệu nhân viên không hợp lệ trong tổng hợp công");
@@ -240,111 +248,153 @@ public class PayslipServiceImpl implements PayslipService {
         Optional<Contract> contractOpt = findEffectiveContract(employeeId, calculationDate);
 
         if (contractOpt.isEmpty()) {
-            throw new IllegalArgumentException("Không tìm thấy hợp đồng lao động có hiệu lực cho nhân viên: " + employeeId);
+            throw new IllegalArgumentException(
+                    "Không tìm thấy hợp đồng lao động có hiệu lực cho nhân viên: " + employeeId);
         }
         Contract contract = contractOpt.get();
 
         // Giảm trừ người phụ thuộc từ system settings
         BigDecimal dependentDeductionUnit = getSettingValue("PHU_CAP_NGUOI_PHU_THUOC", calculationDate);
 
+        // Lương gross
         BigDecimal grossSalary = nvl(contract.getActualSalary());
-        BigDecimal standardDays = toDecimal(period.getStandardWorkingDays() == null ? 26F : period.getStandardWorkingDays());
-        BigDecimal actualDays = toDecimal(summary.getActualWorkingDays() == null ? standardDays.floatValue() : summary.getActualWorkingDays());
+        BigDecimal standardDays = toDecimal(
+                period.getStandardWorkingDays() == null ? 26F : period.getStandardWorkingDays());
+        BigDecimal actualDays = toDecimal(
+                summary.getActualWorkingDays() == null ? standardDays.floatValue() : summary.getActualWorkingDays());
 
+        // Lương theo ngày công = Lương cơ bản x (Công thực tế / Công chuẩn)
         BigDecimal salaryByWorkdays = divide(grossSalary.multiply(actualDays), standardDays);
 
-        List<ContractAllowance> allowances = contractAllowanceRepository.findByContractIdAndIsDeleted(contract.getId(), false);
-        BigDecimal totalAllowance = allowances.stream()
+        // Phụ cấp hợp đồng
+        List<ContractAllowance> allowances = contractAllowanceRepository.findByContractIdAndIsDeleted(contract.getId(),
+                false);
+
+        // Tính thuế và bảo hiểm
+        BigDecimal taxableAndInsurableAllowance = allowances.stream()
+                .filter(a -> a.getAllowanceType() != null
+                        && Boolean.TRUE.equals(a.getAllowanceType().getIsTaxable())
+                        && Boolean.TRUE.equals(a.getAllowanceType().getIsInsuranceBased()))
                 .map(a -> nvl(a.getAmount()))
                 .reduce(ZERO, BigDecimal::add);
-        BigDecimal taxableAllowance = allowances.stream()
-                .filter(a -> a.getAllowanceType() != null && Boolean.TRUE.equals(a.getAllowanceType().getIsTaxable()))
+        // Tính thuế và không tính bảo hiểm
+        BigDecimal taxableAndNonInsurableAllowance = allowances.stream()
+                .filter(a -> a.getAllowanceType() != null
+                        && Boolean.TRUE.equals(a.getAllowanceType().getIsTaxable())
+                        && !Boolean.TRUE.equals(a.getAllowanceType().getIsInsuranceBased()))
                 .map(a -> nvl(a.getAmount()))
                 .reduce(ZERO, BigDecimal::add);
-        BigDecimal nonTaxableAllowance = totalAllowance.subtract(taxableAllowance);
-
-        List<SalaryAdjustment> adjustments = salaryAdjustmentRepository.findByPayrollPeriodIdAndEmployeeIdAndStatusAndIsDeleted(payrollPeriodId, employeeId, SalaryAdjustment.Status.APPROVED, false);
-        BigDecimal bonus = sumByType(adjustments, SalaryAdjustment.Type.BONUS.name());
-        BigDecimal fine = sumByType(adjustments, SalaryAdjustment.Type.FINE.name());
-        BigDecimal advance = sumByType(adjustments, SalaryAdjustment.Type.ADVANCE.name());
-        BigDecimal bhxhBenefit = sumByType(adjustments, SalaryAdjustment.Type.BHXH_BENEFIT.name());
-
-        BigDecimal taxableAdjustment = adjustments.stream()
-                .filter(a -> Boolean.TRUE.equals(a.getIsTaxable()))
+        // không Tính thuế và tính bảo hiểm
+        BigDecimal nonTaxableAndInsurableAllowance = allowances.stream()
+                .filter(a -> a.getAllowanceType() != null
+                        && !Boolean.TRUE.equals(a.getAllowanceType().getIsTaxable())
+                        && Boolean.TRUE.equals(a.getAllowanceType().getIsInsuranceBased()))
                 .map(a -> nvl(a.getAmount()))
                 .reduce(ZERO, BigDecimal::add);
-        BigDecimal nonTaxableAdjustment = adjustments.stream()
-                .filter(a -> Boolean.FALSE.equals(a.getIsTaxable()))
+        // không Tính thuế và không tính bảo hiểm
+        BigDecimal nonTaxableAndNonInsurableAllowance = allowances.stream()
+                .filter(a -> a.getAllowanceType() != null
+                        && !Boolean.TRUE.equals(a.getAllowanceType().getIsTaxable())
+                        && !Boolean.TRUE.equals(a.getAllowanceType().getIsInsuranceBased()))
                 .map(a -> nvl(a.getAmount()))
-                .reduce(ZERO, BigDecimal::add)
-                .add(bhxhBenefit);
+                .reduce(ZERO, BigDecimal::add);
 
-        BigDecimal totalBonus = bonus.subtract(fine);
-        BigDecimal incomeBeforeInsurance = salaryByWorkdays.add(totalAllowance).add(totalBonus);
-
-        BigDecimal baseSalary = nvl(contract.getBaseSalary());
-        BigDecimal bhxhBase = calculateInsuranceBase(baseSalary, "BHXH", calculationDate);
-        BigDecimal socialRate = getInsuranceEmployeeRate("BHXH", calculationDate);
-        BigDecimal healthRate = getInsuranceEmployeeRate("BHYT", calculationDate);
-        BigDecimal unemploymentRate = getInsuranceEmployeeRate("BHTN", calculationDate);
-
-        BigDecimal bhxhAmount = percent(bhxhBase, socialRate);
-        BigDecimal bhytAmount = percent(bhxhBase, healthRate);
-        BigDecimal bhtnAmount = percent(bhxhBase, unemploymentRate);
-        BigDecimal totalInsurance = bhxhAmount.add(bhytAmount).add(bhtnAmount);
+        // Điều chỉnh lương
+        List<SalaryAdjustment> adjustments = salaryAdjustmentRepository
+                .findByPayrollPeriodIdAndEmployeeIdAndStatusAndIsDeleted(payrollPeriodId, employeeId,
+                        SalaryAdjustment.Status.APPROVED, false);
+        BigDecimal bonusTax = sumByType(adjustments, SalaryAdjustment.Type.BONUS.name());
+        BigDecimal bonusNonTax = sumByType(adjustments, SalaryAdjustment.Type.BONUS.name());
+        BigDecimal fineTax = sumByType(adjustments, SalaryAdjustment.Type.FINE.name());
+        BigDecimal fineNonTax = sumByType(adjustments, SalaryAdjustment.Type.FINE.name());
+        BigDecimal advanceTax = sumByType(adjustments, SalaryAdjustment.Type.ADVANCE.name());
+        BigDecimal advanceNonTax = sumByType(adjustments, SalaryAdjustment.Type.ADVANCE.name());
+        // Tổng điều chỉnh tính thuế = Thưởng - phạt - ứng
+        BigDecimal taxableAdjustment = bonusTax.subtract(fineTax).subtract(advanceTax);
+        // Tổng điều chỉnh không tính thuế = Thưởng - phạt - ứng
+        BigDecimal nonTaxableAdjustment = bonusNonTax.subtract(fineNonTax).subtract(advanceNonTax);
 
         long dependentCount = dependentRepository.countByEmployeeIdAndIsQualifiedTrueAndIsDeletedFalse(employeeId);
         BigDecimal deductionDependents = dependentDeductionUnit.multiply(BigDecimal.valueOf(dependentCount));
 
-        // Giảm trừ cá nhân: Mỗi người 11 triệu/năm (theo luật Việt Nam) = 916,666.67/tháng
+        // Tổng thu nhập chịu thuế
+        BigDecimal taxableIncome = salaryByWorkdays
+                .add(taxableAndInsurableAllowance)
+                .add(taxableAndNonInsurableAllowance)
+                .add(taxableAdjustment)
+                .max(ZERO);
+
+         // Lương tính bảo hiểm = Lương cơ bản + Phụ cấp tính bảo hiểm
+        BigDecimal bhxhSalaryBase = nvl(contract.getBaseSalary()).add(taxableAndInsurableAllowance)
+                .add(nonTaxableAndInsurableAllowance);
+        BigDecimal socialRate = getInsuranceEmployeeRate("BHXH", calculationDate);
+        BigDecimal healthRate = getInsuranceEmployeeRate("BHYT", calculationDate);
+        BigDecimal unemploymentRate = getInsuranceEmployeeRate("BHTN", calculationDate);
+        BigDecimal bhxhAmount = percent(bhxhSalaryBase, socialRate);
+        BigDecimal bhytAmount = percent(bhxhSalaryBase, healthRate);
+        BigDecimal bhtnAmount = percent(bhxhSalaryBase, unemploymentRate);
+        // Tổng bảo hiểm
+        BigDecimal totalInsurance = bhxhAmount.add(bhytAmount).add(bhtnAmount);
+
+        // Giảm trừ cá nhân: Mỗi người 11 triệu/tháng
         // Hoặc lấy từ system settings nếu có
         BigDecimal personalDeduction = getSettingValue("GIAM_TRU_CA_NHAN", calculationDate);
         if (personalDeduction.compareTo(ZERO) <= 0) {
-            // Mặc định: 11 triệu/năm ÷ 12 tháng
-            personalDeduction = BigDecimal.valueOf(916_666.67).setScale(2, RoundingMode.HALF_UP);
+            // Mặc định: 11 triệu/tháng
+            personalDeduction = BigDecimal.valueOf(11_000_000).setScale(2, RoundingMode.HALF_UP);
         }
 
-        BigDecimal taxableIncome = salaryByWorkdays
-                .add(taxableAllowance)
-                .add(taxableAdjustment)
-                .subtract(totalInsurance)
-                .max(ZERO);
+        // Tổng giảm trừ = Giảm trừ cá nhân + Giảm trừ người phụ thuộc + Tổng bảo hiểm
+        BigDecimal totalDeductions = personalDeduction
+                .add(deductionDependents)
+                .add(totalInsurance);
 
+        // Tổng thu nhập tính thuế = Thu nhập chịu thuế - Tổng giảm trừ
         BigDecimal assessableIncome = taxableIncome
-                .subtract(personalDeduction)
-                .subtract(deductionDependents)
+                .subtract(totalDeductions)
                 .max(ZERO);
 
-        BigDecimal taxAmount = calculatePit(assessableIncome, calculationDate);
+        // Giảm trừ cố định
+        BigDecimal taxFixedDeduction = getSubtract(assessableIncome, calculationDate);
 
-        BigDecimal netSalary = incomeBeforeInsurance
-                .add(nonTaxableAllowance)
+        // Thuế TNCN = (Thu nhập tính thuế x thuế suất) - Giảm trừ cố định
+        BigDecimal taxAmount = calculatePit(assessableIncome, calculationDate).subtract(taxFixedDeduction).max(ZERO);
+
+        BigDecimal netSalary = taxableIncome
+                .add(nonTaxableAndInsurableAllowance)
+                .add(nonTaxableAndNonInsurableAllowance)
                 .add(nonTaxableAdjustment)
-                .subtract(totalInsurance)
                 .subtract(taxAmount)
-                .subtract(advance)
                 .setScale(2, RoundingMode.HALF_UP);
 
         // Tạo payslip mới (KHÔNG dùng orElseGet)
         Payslip payslip = new Payslip();
         payslip.setPayrollPeriod(period);
-        payslip.setEmployee(summary.getEmployee());
-        payslip.setContract(contract);
-        payslip.setGrossSalary(grossSalary);
-        payslip.setSalaryByWorkdays(salaryByWorkdays);
-        payslip.setTotalAllowance(totalAllowance);
-        payslip.setTotalBonus(totalBonus);
-        payslip.setBhxhSalaryBase(bhxhBase);
-        payslip.setBhxhAmount(bhxhAmount);
-        payslip.setBhytAmount(bhytAmount);
-        payslip.setBhtnAmount(bhtnAmount);
-        payslip.setSocialInsuranceBenefitAmount(bhxhBenefit);
-        payslip.setTaxableIncome(taxableIncome);
-        payslip.setDeductionPersonal(personalDeduction);
-        payslip.setDeductionDependents(deductionDependents);
-        payslip.setAssessableIncome(assessableIncome);
-        payslip.setTaxAmount(taxAmount);
-        payslip.setNetSalary(netSalary);
+        payslip.setEmployee(summary.getEmployee()); // Nhân viên
+        payslip.setContract(contract); // Hợp đồng
+        payslip.setSalaryByWorkdays(salaryByWorkdays); // Lương thanh toán theo công
+        payslip.setWorkdays(actualDays); // Công thực tế
+        payslip.setTotalWorkdays(standardDays); // Tổng số ngày công trong kỳ
+        payslip.setGrossSalary(grossSalary); // Lương cơ sở
+        payslip.setBhxhSalaryBase(bhxhSalaryBase); // Lương tính bảo hiểm
+        payslip.setTaxableAndInsurableAllowance(taxableAndInsurableAllowance);// Phụ cấp chịu thuế và tính bảo hiểm
+        payslip.setTaxableAndNonInsurableAllowance(taxableAndNonInsurableAllowance); // Phụ cấp chịu thuế và không tính bảo hiểm
+        payslip.setNonTaxableAndInsurableAllowance(nonTaxableAndInsurableAllowance); // Phụ cấp không chịu thuế và tính bảo hiểm
+        payslip.setNonTaxableAndNonInsurableAllowance(nonTaxableAndNonInsurableAllowance); // Phụ cấp không chịu thuế và không tính bảo hiểm
+        payslip.setTotalBonus(taxableAdjustment); // Tổng thưởng/phạt tính thuế
+        payslip.setTotalBonusNonTax(nonTaxableAdjustment); // Tổng thưởng/phạt không tính thuế
+        payslip.setBhxhAmount(bhxhAmount); // Bảo hiểm xã hội (8%)
+        payslip.setBhytAmount(bhytAmount); // Bảo hiểm y tế (1.5%)
+        payslip.setBhtnAmount(bhtnAmount); // Bảo hiểm thất nghiệp (1%)
+        payslip.setTaxableIncome(taxableIncome); // Thu nhập chịu thuế
+        payslip.setDeductionPersonal(personalDeduction); // Giảm trừ cá nhân
+        payslip.setDeductionDependents(deductionDependents); // Giảm trừ người phụ thuộc
+        payslip.setTaxFixedDeduction(taxFixedDeduction); // Giảm trừ cố định
+        payslip.setAssessableIncome(assessableIncome); // Thu nhập tính thuế
+        payslip.setTotalDeductions(totalDeductions); // Tổng giảm trừ
+        payslip.setTaxAmount(taxAmount); // Thuế TNCN
+        payslip.setNetSalary(netSalary); // Lương thực nhận
+        payslip.setCreatedBy(securityUtil.getCurrentUsername()); // Người tạo bảng lương
 
         Payslip savedPayslip = payslipRepository.save(payslip);
 
@@ -360,10 +410,13 @@ public class PayslipServiceImpl implements PayslipService {
     /**
      * Tìm hợp đồng lao động có hiệu lực cho nhân viên vào ngày cụ thể
      * Chỉ lấy hợp đồng đã được duyệt (ACTIVE), không bị xóa (isDeleted=false)
-     * và có ngày bắt đầu <= ngày tính toán <= ngày kết thúc (hoặc không có ngày kết thúc)
+     * và có ngày bắt đầu <= ngày tính toán <= ngày kết thúc (hoặc không có ngày kết
+     * thúc)
      */
     private Optional<Contract> findEffectiveContract(UUID employeeId, LocalDate date) {
-        return contractRepository.findByEmployeeIdAndStatusAndStartDateLessThanEqualAndIsDeletedFalseOrderByStartDateDesc(employeeId, "ACTIVE", date)
+        return contractRepository
+                .findByEmployeeIdAndStatusAndStartDateLessThanEqualAndIsDeletedFalseOrderByStartDateDesc(employeeId,
+                        "ACTIVE", date)
                 .stream()
                 .filter(c -> Boolean.FALSE.equals(c.getIsDeleted()))
                 .filter(c -> c.getEndDate() == null || !c.getEndDate().isBefore(date))
@@ -371,51 +424,25 @@ public class PayslipServiceImpl implements PayslipService {
     }
 
     private BigDecimal getSettingValue(String key, LocalDate effectiveDate) {
-        return sysSettingRepository.findTopByKeyAndEffectiveDateLessThanEqualOrderByEffectiveDateDesc(key, effectiveDate)
+        return sysSettingRepository
+                .findTopByKeyAndEffectiveDateLessThanEqualOrderByEffectiveDateDesc(key, effectiveDate)
                 .map(SysSetting::getValue)
                 .map(this::nvl)
                 .orElse(ZERO);
     }
 
     private BigDecimal getInsuranceEmployeeRate(String type, LocalDate effectiveDate) {
-        BigDecimal rate = insuranceConfigRepository.findTopByTypeAndEffectiveDateLessThanEqualOrderByEffectiveDateDesc(type, effectiveDate)
+        BigDecimal rate = insuranceConfigRepository
+                .findTopByTypeAndEffectiveDateLessThanEqualOrderByEffectiveDateDesc(type, effectiveDate)
                 .map(InsuranceConfig::getEmployeeRate)
                 .map(this::nvl)
                 .orElse(ZERO);
         return normalizeRate(rate);
     }
 
-    private BigDecimal calculateInsuranceBase(BigDecimal baseSalary, String type, LocalDate date) {
-        Optional<InsuranceConfig> cfgOpt = insuranceConfigRepository
-                .findTopByTypeAndEffectiveDateLessThanEqualOrderByEffectiveDateDesc(type, date);
-        if (cfgOpt.isEmpty()) {
-            cfgOpt = insuranceConfigRepository.findTopByTypeOrderByCreatedAtDesc(type);
-        }
-        if (cfgOpt.isEmpty()) {
-            return nvl(baseSalary);
-        }
-
-        InsuranceConfig cfg = cfgOpt.get();
-        BigDecimal capBase;
-        if ("REGION_MIN".equalsIgnoreCase(cfg.getCapBaseType())) {
-            // Căn cứ lương tối thiểu khu vực
-            capBase = getSettingValue("LUONG_TOI_THIEU", date);
-        } else {
-            // Căn cứ lương tối đa tính bảo hiểm
-            capBase = getSettingValue("LUONG_TOI_DA_BHXH", date);
-        }
-
-        // Nếu không tìm thấy capBase, dùng baseSalary
-        if (capBase.compareTo(ZERO) <= 0) {
-            return nvl(baseSalary);
-        }
-
-        BigDecimal cap = capBase.multiply(BigDecimal.valueOf(cfg.getCapMultiplier() == null ? 1 : cfg.getCapMultiplier()));
-        return nvl(baseSalary).min(cap).setScale(2, RoundingMode.HALF_UP);
-    }
-
     private BigDecimal calculatePit(BigDecimal assessableIncome, LocalDate effectiveDate) {
-        List<TaxBracket> brackets = taxBracketRepository.findByIsActiveTrueAndEffectiveDateLessThanEqualOrderByMinIncomeAsc(effectiveDate);
+        List<TaxBracket> brackets = taxBracketRepository
+                .findByIsActiveTrueAndEffectiveDateLessThanEqualOrderByMinIncomeAsc(effectiveDate);
         if (brackets.isEmpty()) {
             brackets = taxBracketRepository.findByIsActiveTrueOrderByMinIncomeAsc();
         }
@@ -434,11 +461,37 @@ public class PayslipServiceImpl implements PayslipService {
         }
 
         // Tax rate in database is in percentage (5, 10, 15, etc), need to divide by 100
-        BigDecimal rate = BigDecimal.valueOf(bracket.getTaxRate()).divide(BigDecimal.valueOf(100), 6, RoundingMode.HALF_UP);
+        BigDecimal rate = BigDecimal.valueOf(bracket.getTaxRate()).divide(BigDecimal.valueOf(100), 6,
+                RoundingMode.HALF_UP);
         BigDecimal tax = assessableIncome
                 .multiply(rate)
-                .subtract(nvl(bracket.getSubtractAmount()));
-        return tax.max(ZERO).setScale(2, RoundingMode.HALF_UP);
+                .setScale(2, RoundingMode.HALF_UP);
+        return tax.max(ZERO);
+    }
+
+    // Lấy tiền miễn trừ cố định trong thuế dựa vào thu nhập tính thuế
+    private BigDecimal getSubtract(BigDecimal assessableIncome, LocalDate effectiveDate) {
+        List<TaxBracket> brackets = taxBracketRepository
+                .findByIsActiveTrueAndEffectiveDateLessThanEqualOrderByMinIncomeAsc(effectiveDate);
+        if (brackets.isEmpty()) {
+            brackets = taxBracketRepository.findByIsActiveTrueOrderByMinIncomeAsc();
+        }
+        if (brackets.isEmpty()) {
+            return ZERO;
+        }
+
+        // Tìm bậc thuế phù hợp với thu nhập tính thuế
+        TaxBracket bracket = brackets.stream()
+                .filter(b -> nvl(b.getMinIncome()).compareTo(assessableIncome) <= 0)
+                .filter(b -> b.getMaxIncome() == null || nvl(b.getMaxIncome()).compareTo(assessableIncome) >= 0)
+                .findFirst()
+                .orElse(brackets.stream().max(Comparator.comparing(b -> nvl(b.getMinIncome()))).orElse(null));
+
+        if (bracket == null) {
+            return ZERO;
+        }
+
+        return nvl(bracket.getSubtractAmount());
     }
 
     private BigDecimal sumByType(List<SalaryAdjustment> adjustments, String type) {

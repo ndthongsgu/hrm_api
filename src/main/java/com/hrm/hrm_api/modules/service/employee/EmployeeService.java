@@ -8,6 +8,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
 import java.util.List;
+import com.hrm.hrm_api.modules.dto.response.KnownFaceUploadResponseDto;
+import org.springframework.web.multipart.MultipartFile;
 import java.util.UUID;
 
 public interface EmployeeService {
@@ -18,4 +20,12 @@ public interface EmployeeService {
     void delete(UUID id);
     PaginationResponse<Employee> search(EmployeeSearchRequest request);
     List<SelectOptionDto> getSelectOptions();
+    
+    /**
+     * Upload known face images for an employee to Python API
+     * @param employeeId Employee ID
+     * @param files List of image files to upload
+     * @return Upload response from Python API
+     */
+    KnownFaceUploadResponseDto uploadKnownFaces(String employeeId, List<MultipartFile> files);
 }

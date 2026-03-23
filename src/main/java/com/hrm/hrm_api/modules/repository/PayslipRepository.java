@@ -25,4 +25,11 @@ public interface PayslipRepository extends JpaRepository<Payslip, UUID>, JpaSpec
         @Param("payrollPeriodId") UUID payrollPeriodId,
         @Param("isDeleted") boolean isDeleted
     );
+
+    @Query("SELECT p FROM Payslip p WHERE p.payrollPeriod.id = :payrollPeriodId AND p.employee.id = :employeeId AND p.status = 'APPROVED' AND p.isDeleted = :isDeleted")
+    Payslip findByPayrollPeriodAndEmployeeAndApprovedStatus(
+        @Param("payrollPeriodId") UUID payrollPeriodId,
+        @Param("employeeId") UUID employeeId,
+        @Param("isDeleted") boolean isDeleted
+    );
 }

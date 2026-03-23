@@ -155,8 +155,6 @@ public class PayrollPeriodServiceImpl implements PayrollPeriodService {
                 "Tạo kỳ lương: " + savedPeriod.getName(),
                 securityUtil.getCurrentUsername());
 
-        // Tự động tổng hợp công cho tất cả nhân viên
-        summarizeAttendance(savedPeriod.getId());
 
         return savedPeriod;
     }
@@ -276,6 +274,9 @@ public class PayrollPeriodServiceImpl implements PayrollPeriodService {
         period.setStatus(PayrollPeriod.Status.APPROVED);
 
         repository.save(period);
+
+        // Tự động tổng hợp công cho tất cả nhân viên
+        summarizeAttendance(period.getId());
 
         actionLogUtil.logUpdate(
                 id,
