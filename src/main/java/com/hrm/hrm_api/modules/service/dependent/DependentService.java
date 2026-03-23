@@ -8,6 +8,7 @@ import java.util.UUID;
 
 public interface DependentService {
     Page<Dependent> findAll(Pageable pageable);
+    Page<Dependent> findByEmployeeId(UUID employeeId, String fullName, String relationship, Pageable pageable);
     Dependent findById(UUID id);
     Dependent create(Dependent entity);
     Dependent update(UUID id, Dependent entity);

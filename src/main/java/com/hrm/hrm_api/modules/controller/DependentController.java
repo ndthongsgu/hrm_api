@@ -29,6 +29,17 @@ public class DependentController {
         return ResponseEntity.ok(BaseResponse.ok(PaginationUtils.toPageResponse(page)));
     }
 
+    @GetMapping("/employee/{employeeId}")
+    public ResponseEntity<BaseResponse<PageResponse<Dependent>>> listByEmployee(
+            @PathVariable java.util.UUID employeeId,
+            @RequestParam(required = false) String fullName,
+            @RequestParam(required = false) String relationship,
+            @PageableDefault(size = 20) Pageable pageable
+    ) {
+        Page<Dependent> page = dependentService.findByEmployeeId(employeeId, fullName, relationship, pageable);
+        return ResponseEntity.ok(BaseResponse.ok(PaginationUtils.toPageResponse(page)));
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<BaseResponse<Dependent>> getById(@PathVariable java.util.UUID id) {
         return ResponseEntity.ok(BaseResponse.ok(dependentService.findById(id)));
