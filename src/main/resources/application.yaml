@@ -27,4 +27,7 @@ hrm:
 # Python API Configuration for Known Face Recognition
 python-api:
   base-url: http://localhost:8000
-  known-face-endpoint: /api/add_known_face
+  endpoints:
+    list-known-faces: /api/list
+    upload-known-faces: /api/add_known_face
+  

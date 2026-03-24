@@ -5,6 +5,7 @@ import com.hrm.hrm_api.modules.dto.base.PaginationResponse;
 import com.hrm.hrm_api.modules.dto.base.SelectOptionDto;
 import com.hrm.hrm_api.modules.dto.request.EmployeeSearchRequest;
 import com.hrm.hrm_api.modules.dto.response.KnownFaceUploadResponseDto;
+import com.hrm.hrm_api.modules.dto.response.GetKnownFacesResponseDto;
 import com.hrm.hrm_api.modules.entity.Employee;
 import com.hrm.hrm_api.modules.service.employee.EmployeeService;
 import lombok.extern.slf4j.Slf4j;
@@ -58,6 +59,70 @@ public class EmployeeController {
     public ResponseEntity<BaseResponse<Void>> delete(@PathVariable java.util.UUID id) {
         employeeService.delete(id);
         return ResponseEntity.ok(BaseResponse.ok(null));
+    }
+
+    /**
+     * Get known face images for an employee
+     * This endpoint fetches the list of known face images from Python API
+     *
+     * @param employeeId Employee UUID
+     * @return Response containing list of known face images
+     */
+    @GetMapping("/{employeeId}/known-faces")
+    public ResponseEntity<BaseResponse<GetKnownFacesResponseDto>> getKnownFaces(
+            @PathVariable UUID employeeId
+    ) {
+        log.info("Received request to get known faces for employee: {}", employeeId);
+
+        try {
+            String employeeIdStr = employeeId.toString();
+            GetKnownFacesResponseDto response = employeeService.getKnownFaces(employeeIdStr);
+
+            log.info("Retrieved {} known face images for employee: {}", response.getTotalImages(), employeeId);
+            return ResponseEntity.ok(BaseResponse.ok(response));
+
+        } catch (RuntimeException e) {
+            log.error("Error retrieving known faces for employee {}: {}", employeeId, e.getMessage());
+            return ResponseEntity.internalServerError()
+                    .body(BaseResponse.error("Failed to retrieve known faces: " + e.getMessage()));
+        } catch (Exception e) {
+            log.error("Unexpected error retrieving known faces for employee {}: {}", employeeId, e.getMessage(), e);
+            return ResponseEntity.internalServerError()
+                    .body(BaseResponse.error("An unexpected error occurred"));
+        }
+    }
+
+    /**
+     * Delete a known face image for an employee
+     * This endpoint deletes a specific image from the Python API storage
+     *
+     * @param employeeId Employee UUID
+     * @param filename Image filename to delete
+     * @return Response indicating deletion status
+     */
+    @DeleteMapping("/{employeeId}/known-faces/{filename}")
+    public ResponseEntity<BaseResponse<Void>> deleteKnownFace(
+            @PathVariable UUID employeeId,
+            @PathVariable String filename
+    ) {
+        log.info("Received request to delete known face image for employee: {} - filename: {}", employeeId, filename);
+
+        try {
+            String employeeIdStr = employeeId.toString();
+            employeeService.deleteKnownFace(employeeIdStr, filename);
+
+            log.info("Deleted known face image for employee: {} - filename: {}", employeeId, filename);
+            return ResponseEntity.ok(BaseResponse.ok(null));
+
+        } catch (RuntimeException e) {
+            log.error("Error deleting known face for employee {}: {}", employeeId, e.getMessage());
+            return ResponseEntity.internalServerError()
+                    .body(BaseResponse.error("Failed to delete known face: " + e.getMessage()));
+        } catch (Exception e) {
+            log.error("Unexpected error deleting known face for employee {}: {}", employeeId, e.getMessage(), e);
+            return ResponseEntity.internalServerError()
+                    .body(BaseResponse.error("An unexpected error occurred"));
+        }
     }
 
     /**

@@ -5,6 +5,7 @@ import com.hrm.hrm_api.modules.dto.base.PaginationResponse;
 import com.hrm.hrm_api.modules.dto.base.SelectOptionDto;
 import com.hrm.hrm_api.modules.dto.request.EmployeeSearchRequest;
 import com.hrm.hrm_api.modules.dto.response.KnownFaceUploadResponseDto;
+import com.hrm.hrm_api.modules.dto.response.GetKnownFacesResponseDto;
 import com.hrm.hrm_api.modules.entity.Employee;
 import com.hrm.hrm_api.modules.entity.Department;
 import com.hrm.hrm_api.modules.entity.Position;
@@ -46,8 +47,11 @@ public class EmployeeServiceImpl implements EmployeeService {
     @Value("${python-api.base-url:http://localhost:8000}")
     private String pythonApiBaseUrl;
 
-    @Value("${python-api.known-face-endpoint:/api/add_known_face}")
-    private String knownFaceEndpoint;
+    @Value("${python-api.endpoints.list-known-faces:/api/list}")
+    private String listKnownFacesEndpoint;
+
+    @Value("${python-api.endpoints.upload-known-faces:/api/add_known_face}")
+    private String uploadKnownFacesEndpoint;
 
     public EmployeeServiceImpl(
             EmployeeRepository repository,
@@ -216,6 +220,60 @@ public class EmployeeServiceImpl implements EmployeeService {
     }
 
     @Override
+    public GetKnownFacesResponseDto getKnownFaces(String employeeId) {
+        if (employeeId == null || employeeId.trim().isEmpty()) {
+            throw new IllegalArgumentException("Employee ID is required");
+        }
+
+        try {
+            // Call Python API to get known faces list
+            String url = pythonApiBaseUrl + listKnownFacesEndpoint + "/" + employeeId;
+            log.info("Calling Python API to get known faces for employee: {} - URL: {}", employeeId, url);
+
+            ResponseEntity<GetKnownFacesResponseDto> response = restTemplate.getForEntity(
+                    url,
+                    GetKnownFacesResponseDto.class
+            );
+
+            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+                log.info("Successfully retrieved known faces for employee: {} - Total: {}", 
+                        employeeId, response.getBody().getTotalImages());
+                return response.getBody();
+            } else {
+                throw new RuntimeException("Failed to get known faces: Invalid response from Python API");
+            }
+
+        } catch (HttpClientErrorException e) {
+            if (e.getStatusCode().value() == 404) {
+                // Return empty list if no known faces found
+                log.info("No known faces found for employee: {}", employeeId);
+                return GetKnownFacesResponseDto.builder()
+                        .status("success")
+                        .employeeId(employeeId)
+                        .totalImages(0)
+                        .images(List.of())
+                        .build();
+            }
+            log.error("HTTP error calling Python API for employee {}: {} - {}", 
+                    employeeId, e.getStatusCode(), e.getResponseBodyAsString());
+            throw new RuntimeException(
+                    "Failed to get known faces: " + e.getMessage(),
+                    e
+            );
+        } catch (Exception e) {
+            log.error("Error retrieving known faces for employee {}: {}", employeeId, e.getMessage());
+            // Return empty list on error instead of throwing
+            log.info("Returning empty known faces list for employee: {} due to error: {}", employeeId, e.getMessage());
+            return GetKnownFacesResponseDto.builder()
+                    .status("success")
+                    .employeeId(employeeId)
+                    .totalImages(0)
+                    .images(List.of())
+                    .build();
+        }
+    }
+
+    @Override
     public KnownFaceUploadResponseDto uploadKnownFaces(String employeeId, List<MultipartFile> files) {
         if (employeeId == null || employeeId.trim().isEmpty()) {
             throw new IllegalArgumentException("Employee ID is required");
@@ -249,7 +307,7 @@ public class EmployeeServiceImpl implements EmployeeService {
             HttpEntity<MultiValueMap<String, Object>> request = new HttpEntity<>(body, headers);
 
             // Call Python API
-            String url = pythonApiBaseUrl + knownFaceEndpoint;
+            String url = pythonApiBaseUrl + uploadKnownFacesEndpoint;
             log.info("Calling Python API: {} for employee: {} with {} files", url, employeeId, files.size());
 
             ResponseEntity<KnownFaceUploadResponseDto> response = restTemplate.postForEntity(
@@ -283,6 +341,47 @@ public class EmployeeServiceImpl implements EmployeeService {
             log.error("Unexpected error uploading known faces for employee {}: {}", employeeId, e.getMessage());
             throw new RuntimeException(
                     "Failed to upload known faces: " + e.getMessage(),
+                    e
+            );
+        }
+    }
+
+    @Override
+    public void deleteKnownFace(String employeeId, String filename) {
+        if (employeeId == null || employeeId.trim().isEmpty()) {
+            throw new IllegalArgumentException("Employee ID is required");
+        }
+
+        if (filename == null || filename.trim().isEmpty()) {
+            throw new IllegalArgumentException("Filename is required");
+        }
+
+        try {
+            // Build URL
+            String url = pythonApiBaseUrl  + "/api/" + employeeId + "/" + filename;
+            log.info("Calling Python API to delete known face for employee: {} - filename: {} - URL: {}", 
+                    employeeId, filename, url);
+
+            restTemplate.delete(url);
+
+            log.info("Successfully deleted known face image for employee: {} - filename: {}", 
+                    employeeId, filename);
+
+        } catch (HttpClientErrorException e) {
+            if (e.getStatusCode().value() == 404) {
+                log.warn("Image not found for employee {}: {}", employeeId, filename);
+                throw new RuntimeException("Image not found");
+            }
+            log.error("HTTP error calling Python API for employee {}: {} - {}", 
+                    employeeId, e.getStatusCode(), e.getResponseBodyAsString());
+            throw new RuntimeException(
+                    "Failed to delete known face: " + e.getMessage(),
+                    e
+            );
+        } catch (Exception e) {
+            log.error("Error deleting known face for employee {}: {}", employeeId, e.getMessage());
+            throw new RuntimeException(
+                    "Failed to delete known face: " + e.getMessage(),
                     e
             );
         }
