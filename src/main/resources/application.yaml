@@ -30,4 +30,5 @@ python-api:
   endpoints:
     list-known-faces: /api/list
     upload-known-faces: /api/add_known_face
-  
+
+

@@ -3,6 +3,7 @@ package com.hrm.hrm_api.modules.service.officeLocation;
 import com.hrm.hrm_api.common.exception.ResourceNotFoundException;
 import com.hrm.hrm_api.common.security.SecurityUtil;
 import com.hrm.hrm_api.modules.dto.base.PaginationResponse;
+import com.hrm.hrm_api.modules.dto.base.SelectOptionDto;
 import com.hrm.hrm_api.modules.dto.officeLocation.OfficeLocationFilter;
 import com.hrm.hrm_api.modules.dto.request.OfficeLocationSearchRequest;
 import com.hrm.hrm_api.modules.entity.OfficeLocation;
@@ -14,7 +15,9 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 public class OfficeLocationServiceImpl implements OfficeLocationService {
@@ -197,5 +200,20 @@ public class OfficeLocationServiceImpl implements OfficeLocationService {
                 "OFFICE_LOCATION",
                 "Hủy duyệt địa điểm văn phòng: " + location.getName(),
                 securityUtil.getCurrentUsername());
+    }
+
+    /**
+     * Lấy danh sách các địa điểm văn phòng đã duyệt cho selectbox
+     */
+    @Override
+    public List<SelectOptionDto> getSelectOptions() {
+        return repository.findAll()
+                .stream()
+                .filter(location -> location.getStatus() == OfficeLocation.Status.APPROVED 
+                        && (location.getIsDeleted() == null || !location.getIsDeleted()))
+                .map(location -> new SelectOptionDto(
+                        location.getId(),
+                        location.getName()))
+                .collect(Collectors.toList());
     }
 }

@@ -7,10 +7,12 @@ import com.hrm.hrm_api.modules.dto.request.EmployeeSearchRequest;
 import com.hrm.hrm_api.modules.dto.response.KnownFaceUploadResponseDto;
 import com.hrm.hrm_api.modules.dto.response.GetKnownFacesResponseDto;
 import com.hrm.hrm_api.modules.entity.Employee;
+import com.hrm.hrm_api.modules.entity.OfficeLocation;
 import com.hrm.hrm_api.modules.entity.Department;
 import com.hrm.hrm_api.modules.entity.Position;
 import com.hrm.hrm_api.modules.repository.DepartmentRepository;
 import com.hrm.hrm_api.modules.repository.EmployeeRepository;
+import com.hrm.hrm_api.modules.repository.OfficeLocationRepository;
 import com.hrm.hrm_api.modules.repository.PositionRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -43,6 +45,7 @@ public class EmployeeServiceImpl implements EmployeeService {
     private final DepartmentRepository departmentRepository;
     private final PositionRepository positionRepository;
     private final RestTemplate restTemplate;
+    private final OfficeLocationRepository officeLocationRepository;
 
     @Value("${python-api.base-url:http://localhost:8000}")
     private String pythonApiBaseUrl;
@@ -57,12 +60,14 @@ public class EmployeeServiceImpl implements EmployeeService {
             EmployeeRepository repository,
             DepartmentRepository departmentRepository,
             PositionRepository positionRepository,
-            RestTemplate restTemplate
+            RestTemplate restTemplate,
+            OfficeLocationRepository officeLocationRepository
     ) {
         this.employeeRepository = repository;
         this.departmentRepository = departmentRepository;
         this.positionRepository = positionRepository;
         this.restTemplate = restTemplate;
+        this.officeLocationRepository = officeLocationRepository;
     }
 
     @Override
@@ -86,6 +91,11 @@ public class EmployeeServiceImpl implements EmployeeService {
         Position resolvedPosition = resolvePosition(entity);
         if (resolvedPosition != null) {
             entity.setPosition(resolvedPosition);
+        }
+
+        OfficeLocation resolvedOfficeLocation = resolveOfficeLocation(entity);
+        if (resolvedOfficeLocation != null) {
+            entity.setOfficeLocation(resolvedOfficeLocation);
         }
 
         if (entity.getIsDeleted() == null) {
@@ -113,7 +123,18 @@ public class EmployeeServiceImpl implements EmployeeService {
         existing.setDateOfBirth(entity.getDateOfBirth());
         existing.setHireDate(entity.getHireDate());
         existing.setNotes(entity.getNotes());
+        existing.setTaxCode(entity.getTaxCode());
+        existing.setBankAccount(entity.getBankAccount());
+        existing.setBankName(entity.getBankName());
+        existing.setStatus(entity.getStatus());
 
+        // Handle office location
+        OfficeLocation resolvedOfficeLocation = resolveOfficeLocation(entity);
+        if (resolvedOfficeLocation != null) {
+            existing.setOfficeLocation(resolvedOfficeLocation);
+        }
+
+        // Handle department
         Department resolvedDepartment = resolveDepartment(entity);
         if (resolvedDepartment != null) {
             existing.setDepartment(resolvedDepartment);
@@ -121,18 +142,13 @@ public class EmployeeServiceImpl implements EmployeeService {
             existing.setDepartment(entity.getDepartment());
         }
 
+        // Handle position
         Position resolvedPosition = resolvePosition(entity);
         if (resolvedPosition != null) {
             existing.setPosition(resolvedPosition);
         } else if (entity.getPosition() != null) {
             existing.setPosition(entity.getPosition());
         }
-
-        existing.setTaxCode(entity.getTaxCode());
-        existing.setBankAccount(entity.getBankAccount());
-        existing.setBankName(entity.getBankName());
-        existing.setStatus(entity.getStatus());
-        existing.setOfficeLocation(entity.getOfficeLocation());
 
         if (entity.getIsDeleted() != null) {
             existing.setIsDeleted(entity.getIsDeleted());
@@ -215,6 +231,18 @@ public class EmployeeServiceImpl implements EmployeeService {
         if (entity.getPositionId() != null) {
             return positionRepository.findById(entity.getPositionId())
                     .orElseThrow(() -> new ResourceNotFoundException(Position.class, entity.getPositionId()));
+        }
+        return null;
+    }
+
+    private OfficeLocation resolveOfficeLocation(Employee entity) {
+        if (entity.getOfficeLocation() != null && entity.getOfficeLocation().getId() != null) {
+            return officeLocationRepository.findById(entity.getOfficeLocation().getId())
+                    .orElseThrow(() -> new ResourceNotFoundException(OfficeLocation.class, entity.getOfficeLocation().getId()));
+        }
+        if (entity.getOfficeLocationId() != null) {
+            return officeLocationRepository.findById(entity.getOfficeLocationId())
+                    .orElseThrow(() -> new ResourceNotFoundException(OfficeLocation.class, entity.getOfficeLocationId()));
         }
         return null;
     }

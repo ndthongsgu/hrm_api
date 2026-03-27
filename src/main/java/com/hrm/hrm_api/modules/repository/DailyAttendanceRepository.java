@@ -58,4 +58,18 @@ public interface DailyAttendanceRepository extends JpaRepository<DailyAttendance
     Double sumOvertimeHours(@Param("employeeId") UUID employeeId, 
                            @Param("startDate") LocalDate startDate, 
                            @Param("endDate") LocalDate endDate);
+
+    /**
+     * Find today's attendance record for an employee
+     */
+    DailyAttendance findByEmployeeIdAndDate(UUID employeeId, LocalDate date);
+    
+    /**
+     * Find attendance record by employeeId, shiftId, and date
+     * @param employeeId Employee ID
+     * @param shiftId Shift ID
+     * @param date Attendance date
+     * @return DailyAttendance record if found
+     */
+    DailyAttendance findByEmployeeIdAndShiftIdAndDate(UUID employeeId, UUID shiftId, LocalDate date);
 }

@@ -92,6 +92,9 @@ public class Employee extends BaseEntity {
     @JsonManagedReference("employee-identities")
     private List<EmployeeIdentity> identities;
 
+    @Transient
+    private UUID officeLocationId; 
+
     // Vị trí chấm công của nhân viên
     @ManyToOne
     @JoinColumn(name = "office_location_id")

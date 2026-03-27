@@ -4,6 +4,7 @@ import com.hrm.hrm_api.common.constants.PermissionDefinition;
 import com.hrm.hrm_api.config.annotations.RequirePermission;
 import com.hrm.hrm_api.modules.dto.base.BaseResponse;
 import com.hrm.hrm_api.modules.dto.base.PaginationResponse;
+import com.hrm.hrm_api.modules.dto.base.SelectOptionDto;
 import com.hrm.hrm_api.modules.dto.request.OfficeLocationSearchRequest;
 import com.hrm.hrm_api.modules.entity.OfficeLocation;
 import com.hrm.hrm_api.modules.service.officeLocation.OfficeLocationService;
@@ -14,6 +15,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -36,6 +38,15 @@ public class OfficeLocationController {
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
         PaginationResponse<OfficeLocation> response = service.search(request, pageable);
         return ResponseEntity.ok(BaseResponse.ok(response));
+    }
+
+    /**
+     * Lấy danh sách địa điểm văn phòng đã duyệt cho selectbox
+     */
+    @GetMapping("/select")
+    public ResponseEntity<BaseResponse<List<SelectOptionDto>>> getSelectOptions() {
+        List<SelectOptionDto> options = service.getSelectOptions();
+        return ResponseEntity.ok(BaseResponse.ok(options));
     }
 
     /**
