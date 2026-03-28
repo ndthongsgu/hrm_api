@@ -49,4 +49,14 @@ public interface DailyAttendanceService {
      * @return Map with shift details (name, startTime, endTime, breakStart, breakEnd, checkInTime, checkOutTime, status)
      */
     java.util.Map<String, Object> getTodaysShiftInfo(UUID employeeId);
+
+    /**
+     * Get attendance data for an employee for a specific month
+     * 
+     * @param employeeId UUID of the employee
+     * @param year Year
+     * @param month Month (1-12)
+     * @return Map with attendance data for the month
+     */
+    java.util.Map<String, Object> getMonthlyAttendance(UUID employeeId, int year, int month);
 }

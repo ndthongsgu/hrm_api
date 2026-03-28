@@ -90,6 +90,38 @@ public class DailyAttendanceController {
     }
 
     /**
+     * Get monthly attendance data for an employee
+     * 
+     * @param employeeId UUID of the employee
+     * @param year Year (optional, defaults to current year)
+     * @param month Month 1-12 (optional, defaults to current month)
+     * @return Map containing attendance summary and daily records for the month
+     */
+    @GetMapping("/monthly/{employeeId}")
+    public ResponseEntity<BaseResponse<HashMap<String, Object>>> getMonthlyAttendance(
+            @PathVariable String employeeId,
+            @RequestParam(required = false) Integer year,
+            @RequestParam(required = false) Integer month) {
+        
+        try {
+            java.util.UUID uuid = java.util.UUID.fromString(employeeId);
+            
+            // Use current date if year/month not provided
+            if (year == null) {
+                year = LocalDate.now().getYear();
+            }
+            if (month == null) {
+                month = LocalDate.now().getMonthValue();
+            }
+            
+            HashMap<String, Object> monthlyData = (HashMap<String, Object>) service.getMonthlyAttendance(uuid, year, month);
+            return ResponseEntity.ok(BaseResponse.ok(monthlyData));
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Invalid employee ID format: " + employeeId, e);
+        }
+    }
+
+    /**
      * Check-in endpoint for mobile app
      * 
      * Receives:

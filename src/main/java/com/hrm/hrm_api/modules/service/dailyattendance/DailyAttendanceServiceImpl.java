@@ -365,4 +365,55 @@ public class DailyAttendanceServiceImpl implements DailyAttendanceService {
         
         return shiftInfo;
     }
+
+    @Override
+    public java.util.Map<String, Object> getMonthlyAttendance(UUID employeeId, int year, int month) {
+        java.util.HashMap<String, Object> monthlyData = new java.util.HashMap<>();
+        
+        // Verify employee exists
+        Employee employee = employeeRepository.findById(employeeId)
+            .orElseThrow(() -> {
+                log.warn("Employee not found: {}", employeeId);
+                return new ResourceNotFoundException(Employee.class, employeeId);
+            });
+        
+        // Calculate start and end date of the month
+        LocalDate startDate = LocalDate.of(year, month, 1);
+        LocalDate endDate = startDate.withDayOfMonth(startDate.lengthOfMonth());
+        
+        // Get attendance summary
+        Long actualWorkingDays = repository.countActualWorkingDays(employeeId, startDate, endDate);
+        Long paidLeaveDays = repository.countPaidLeaveDays(employeeId, startDate, endDate);
+        Long unpaidLeaveDays = repository.countUnpaidLeaveDays(employeeId, startDate, endDate);
+        Double overtimeHours = repository.sumOvertimeHours(employeeId, startDate, endDate);
+        
+        // Get all daily attendance records for the month
+        java.util.List<DailyAttendance> dailyRecords = repository.findByEmployeeIdAndDateBetween(
+            employeeId, startDate, endDate
+        );
+        
+        // Build response map
+        monthlyData.put("employeeId", employeeId.toString());
+        monthlyData.put("employeeName", employee.getFullName());
+        monthlyData.put("year", year);
+        monthlyData.put("month", month);
+        monthlyData.put("startDate", startDate);
+        monthlyData.put("endDate", endDate);
+        
+        // Summary statistics
+        java.util.HashMap<String, Object> summary = new java.util.HashMap<>();
+        summary.put("actualWorkingDays", actualWorkingDays != null ? actualWorkingDays : 0);
+        summary.put("paidLeaveDays", paidLeaveDays != null ? paidLeaveDays : 0);
+        summary.put("unpaidLeaveDays", unpaidLeaveDays != null ? unpaidLeaveDays : 0);
+        summary.put("overtimeHours", overtimeHours != null ? overtimeHours : 0.0);
+        summary.put("totalDaysInMonth", startDate.lengthOfMonth());
+        monthlyData.put("summary", summary);
+        
+        // Daily records
+        monthlyData.put("dailyRecords", dailyRecords);
+        
+        log.info("Retrieved monthly attendance for employee {} for {}/{}", employeeId, month, year);
+        
+        return monthlyData;
+    }
 }

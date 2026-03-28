@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.UUID;
 
 public interface DailyAttendanceRepository extends JpaRepository<DailyAttendance, UUID> {
@@ -72,4 +73,6 @@ public interface DailyAttendanceRepository extends JpaRepository<DailyAttendance
      * @return DailyAttendance record if found
      */
     DailyAttendance findByEmployeeIdAndShiftIdAndDate(UUID employeeId, UUID shiftId, LocalDate date);
+
+    List<DailyAttendance> findByEmployeeIdAndDateBetween(UUID employeeId, LocalDate startDate, LocalDate endDate);
 }
