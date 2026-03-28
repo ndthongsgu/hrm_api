@@ -2,9 +2,9 @@ package com.hrm.hrm_api.modules.controller;
 
 import com.hrm.hrm_api.modules.dto.base.BaseResponse;
 import com.hrm.hrm_api.modules.dto.base.PageResponse;
+import com.hrm.hrm_api.modules.dto.response.ContractResponseDto;
 import com.hrm.hrm_api.modules.entity.Contract;
 import com.hrm.hrm_api.modules.service.contract.ContractService;
-import com.hrm.hrm_api.modules.util.PaginationUtils;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -27,18 +28,27 @@ public class ContractController {
     }
 
     @GetMapping
-    public ResponseEntity<BaseResponse<PageResponse<Contract>>> list(@PageableDefault(size = 20) Pageable pageable) {
+    public ResponseEntity<BaseResponse<PageResponse<ContractResponseDto>>> list(@PageableDefault(size = 20) Pageable pageable) {
         Page<Contract> page = contractService.findAll(pageable);
-        return ResponseEntity.ok(BaseResponse.ok(PaginationUtils.toPageResponse(page)));
+        List<ContractResponseDto> items = page.getContent().stream()
+                .map(ContractResponseDto::fromEntity)
+                .toList();
+        PageResponse<ContractResponseDto> response = PageResponse.of(
+                items,
+                page.getTotalElements(),
+                page.getNumber(),
+                page.getSize()
+        );
+        return ResponseEntity.ok(BaseResponse.ok(response));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<BaseResponse<Contract>> getById(@PathVariable java.util.UUID id) {
-        return ResponseEntity.ok(BaseResponse.ok(contractService.findById(id)));
+    public ResponseEntity<BaseResponse<ContractResponseDto>> getById(@PathVariable java.util.UUID id) {
+        return ResponseEntity.ok(BaseResponse.ok(ContractResponseDto.fromEntity(contractService.findById(id))));
     }
 
     @GetMapping("/active")
-    public ResponseEntity<BaseResponse<Contract>> getActiveContract(
+    public ResponseEntity<BaseResponse<ContractResponseDto>> getActiveContract(
             @RequestParam UUID employeeId,
             @RequestParam(required = false) UUID payrollPeriodId,
             @RequestParam(required = false) LocalDate date
@@ -49,17 +59,17 @@ public class ContractController {
         } else {
             contractOpt = contractService.findActiveByDate(employeeId, date == null ? LocalDate.now() : date);
         }
-        return ResponseEntity.ok(BaseResponse.ok(contractOpt.orElse(null)));
+        return ResponseEntity.ok(BaseResponse.ok(contractOpt.map(ContractResponseDto::fromEntity).orElse(null)));
     }
 
     @PostMapping
-    public ResponseEntity<BaseResponse<Contract>> create(@Valid @RequestBody Contract payload) {
-        return ResponseEntity.ok(BaseResponse.ok(contractService.create(payload)));
+    public ResponseEntity<BaseResponse<ContractResponseDto>> create(@Valid @RequestBody Contract payload) {
+        return ResponseEntity.ok(BaseResponse.ok(ContractResponseDto.fromEntity(contractService.create(payload))));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<BaseResponse<Contract>> update(@PathVariable java.util.UUID id, @Valid @RequestBody Contract payload) {
-        return ResponseEntity.ok(BaseResponse.ok(contractService.update(id, payload)));
+    public ResponseEntity<BaseResponse<ContractResponseDto>> update(@PathVariable java.util.UUID id, @Valid @RequestBody Contract payload) {
+        return ResponseEntity.ok(BaseResponse.ok(ContractResponseDto.fromEntity(contractService.update(id, payload))));
     }
 
     @DeleteMapping("/{id}")
