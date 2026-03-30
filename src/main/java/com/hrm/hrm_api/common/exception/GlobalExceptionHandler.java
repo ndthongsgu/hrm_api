@@ -152,6 +152,13 @@ public class GlobalExceptionHandler {
                 HttpStatus.BAD_REQUEST);
     }
 
+    @ExceptionHandler(PdfGenerationException.class)
+    public ResponseEntity<BaseResponse<Object>> handlePdfGeneration(PdfGenerationException ex) {
+        return new ResponseEntity<>(
+                BaseResponse.error(ex.getMessage()),
+                HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
     /**
      * Xử lý lỗi NullPointerException
      */
