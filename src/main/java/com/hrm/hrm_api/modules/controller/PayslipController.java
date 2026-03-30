@@ -5,15 +5,20 @@ import com.hrm.hrm_api.config.annotations.RequirePermission;
 import com.hrm.hrm_api.modules.dto.base.BaseResponse;
 import com.hrm.hrm_api.modules.dto.base.PageResponse;
 import com.hrm.hrm_api.modules.entity.Payslip;
+import com.hrm.hrm_api.modules.service.payslip.MonthlyPayrollReportExport;
 import com.hrm.hrm_api.modules.service.payslip.PayslipService;
 import com.hrm.hrm_api.modules.util.PaginationUtils;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.util.UriUtils;
 
 import jakarta.validation.Valid;
+import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 
 @RestController
@@ -84,6 +89,20 @@ public class PayslipController {
     public ResponseEntity<BaseResponse<String>> approve(@PathVariable java.util.UUID id) {
         service.approve(id);
         return ResponseEntity.ok(BaseResponse.ok("Duyệt phiếu lương thành công"));
+    }
+
+    @GetMapping("/export/monthly-report/{payrollPeriodId}")
+    @RequirePermission(module = "PAYROLL", action = PermissionDefinition.EXPORT)
+    public ResponseEntity<byte[]> exportMonthlyReport(@PathVariable UUID payrollPeriodId) {
+        MonthlyPayrollReportExport export = service.exportMonthlyReport(payrollPeriodId);
+
+        String disposition = "attachment; filename=\"" + export.asciiFilename() + "\"; filename*=UTF-8''"
+                + UriUtils.encode(export.utf8Filename(), StandardCharsets.UTF_8);
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_PDF)
+                .header(HttpHeaders.CONTENT_DISPOSITION, disposition)
+                .body(export.content());
     }
 
     // Lấy phiếu lương của một nhân viên trong kỳ lương cụ thể (API cho app mobile)
