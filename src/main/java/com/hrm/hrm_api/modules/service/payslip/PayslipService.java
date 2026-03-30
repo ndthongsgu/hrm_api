@@ -15,4 +15,5 @@ public interface PayslipService {
 	void approve(UUID id);
 	Payslip generateForEmployee(UUID payrollPeriodId, UUID employeeId);
 	Payslip findByEmployeeAndPayrollPeriod(UUID employeeId, UUID payrollPeriodId);
+	MonthlyPayrollReportExport exportMonthlyReport(UUID payrollPeriodId);
 }

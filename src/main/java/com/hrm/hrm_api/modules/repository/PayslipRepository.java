@@ -12,6 +12,12 @@ import java.util.UUID;
 
 public interface PayslipRepository extends JpaRepository<Payslip, UUID>, JpaSpecificationExecutor<Payslip> {
 	Optional<Payslip> findByPayrollPeriodIdAndEmployeeId(UUID payrollPeriodId, UUID employeeId);
+
+    List<Payslip> findByPayrollPeriodIdAndStatusAndIsDeletedOrderByEmployee_EmployeeCodeAscEmployee_FullNameAsc(
+        UUID payrollPeriodId,
+        Payslip.Status status,
+        boolean isDeleted
+    );
     
     @Query("SELECT p FROM Payslip p WHERE p.payrollPeriod.id = :payrollPeriodId AND p.employee.id = :employeeId AND p.isDeleted = :isDeleted")
     Payslip findByPayrollPeriodAndEmployeeAndIsDeleted(

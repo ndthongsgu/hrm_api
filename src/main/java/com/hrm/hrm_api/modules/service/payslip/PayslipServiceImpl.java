@@ -1,5 +1,6 @@
 package com.hrm.hrm_api.modules.service.payslip;
 
+import com.hrm.hrm_api.common.exception.ResourceNotFoundException;
 import com.hrm.hrm_api.modules.entity.AttendanceSummary;
 import com.hrm.hrm_api.modules.entity.Contract;
 import com.hrm.hrm_api.modules.entity.ContractAllowance;
@@ -20,9 +21,7 @@ import com.hrm.hrm_api.modules.repository.SalaryAdjustmentRepository;
 import com.hrm.hrm_api.modules.repository.SysSettingRepository;
 import com.hrm.hrm_api.modules.repository.TaxBracketRepository;
 import com.hrm.hrm_api.modules.util.ActionLogUtil;
-import com.hrm.hrm_api.common.exception.ResourceNotFoundException;
 import com.hrm.hrm_api.common.security.SecurityUtil;
-
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -32,7 +31,10 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.text.Normalizer;
 import java.util.Comparator;
+import java.util.Locale;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -54,6 +56,7 @@ public class PayslipServiceImpl implements PayslipService {
     private final InsuranceConfigRepository insuranceConfigRepository;
     private final ActionLogUtil actionLogUtil;
     private final SecurityUtil securityUtil;
+    private final MonthlyPayrollReportPdfGenerator monthlyPayrollReportPdfGenerator;
 
     public PayslipServiceImpl(
             PayslipRepository repository,
@@ -67,7 +70,8 @@ public class PayslipServiceImpl implements PayslipService {
             TaxBracketRepository taxBracketRepository,
             InsuranceConfigRepository insuranceConfigRepository,
             ActionLogUtil actionLogUtil,
-            SecurityUtil securityUtil
+            SecurityUtil securityUtil,
+            MonthlyPayrollReportPdfGenerator monthlyPayrollReportPdfGenerator
 
     ) {
         this.payslipRepository = repository;
@@ -82,6 +86,7 @@ public class PayslipServiceImpl implements PayslipService {
         this.insuranceConfigRepository = insuranceConfigRepository;
         this.actionLogUtil = actionLogUtil;
         this.securityUtil = securityUtil;
+        this.monthlyPayrollReportPdfGenerator = monthlyPayrollReportPdfGenerator;
     }
 
     /**
@@ -144,6 +149,37 @@ public class PayslipServiceImpl implements PayslipService {
     @Override
     public Payslip findByEmployeeAndPayrollPeriod(UUID employeeId, UUID payrollPeriodId) {
         return payslipRepository.findByPayrollPeriodAndEmployeeAndApprovedStatus(payrollPeriodId, employeeId, false);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public MonthlyPayrollReportExport exportMonthlyReport(UUID payrollPeriodId) {
+        PayrollPeriod period = payrollPeriodRepository.findById(payrollPeriodId)
+                .orElseThrow(() -> new ResourceNotFoundException(PayrollPeriod.class, payrollPeriodId));
+
+        if (period.getStatus() != PayrollPeriod.Status.APPROVED || Boolean.TRUE.equals(period.getIsDeleted())) {
+            throw new IllegalStateException("Kỳ lương này không thể xuất báo cáo");
+        }
+
+        List<Payslip> payslips = payslipRepository
+                .findByPayrollPeriodIdAndStatusAndIsDeletedOrderByEmployee_EmployeeCodeAscEmployee_FullNameAsc(
+                        payrollPeriodId, Payslip.Status.APPROVED, false);
+
+        if (payslips.isEmpty()) {
+            throw new IllegalStateException("Không có phiếu lương đã duyệt để xuất báo cáo");
+        }
+
+        MonthlyPayrollReportData reportData = new MonthlyPayrollReportData(
+                period,
+                payslips,
+                securityUtil.getCurrentUsername(),
+                LocalDateTime.now());
+
+        byte[] content = monthlyPayrollReportPdfGenerator.generate(reportData);
+        return new MonthlyPayrollReportExport(
+                content,
+                buildAsciiFilename(period.getName()),
+                buildUtf8Filename(period.getName()));
     }
 
     @Override
@@ -535,5 +571,23 @@ public class PayslipServiceImpl implements PayslipService {
             return ZERO;
         }
         return value.setScale(2, RoundingMode.HALF_UP);
+    }
+
+    private String buildAsciiFilename(String payrollPeriodName) {
+        String rawName = payrollPeriodName == null ? "khong-ten" : payrollPeriodName;
+        String normalized = Normalizer.normalize(rawName, Normalizer.Form.NFD)
+                .replaceAll("\\p{M}+", "")
+                .replace('đ', 'd')
+                .replace('Đ', 'D');
+        String slug = normalized
+                .toLowerCase(Locale.ROOT)
+                .replaceAll("[^a-z0-9]+", "-")
+                .replaceAll("(^-|-$)", "");
+        return "bao-cao-luong-thang-" + (slug.isBlank() ? "khong-ten" : slug) + ".pdf";
+    }
+
+    private String buildUtf8Filename(String payrollPeriodName) {
+        String safeName = (payrollPeriodName == null || payrollPeriodName.isBlank()) ? "ky-luong" : payrollPeriodName;
+        return "bao-cao-luong-thang-" + safeName + ".pdf";
     }
 }
