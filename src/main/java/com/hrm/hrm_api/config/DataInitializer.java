@@ -2,8 +2,10 @@ package com.hrm.hrm_api.config;
 
 import com.hrm.hrm_api.common.constants.ModuleDefinition;
 import com.hrm.hrm_api.common.constants.PermissionDefinition;
+import com.hrm.hrm_api.modules.entity.Employee;
 import com.hrm.hrm_api.modules.entity.Role;
 import com.hrm.hrm_api.modules.entity.User;
+import com.hrm.hrm_api.modules.repository.EmployeeRepository;
 import com.hrm.hrm_api.modules.repository.RoleRepository;
 import com.hrm.hrm_api.modules.repository.UserRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -21,22 +23,21 @@ public class DataInitializer implements CommandLineRunner {
 
     private final RoleRepository roleRepository;
     private final UserRepository userRepository;
+    private final EmployeeRepository employeeRepository;
     private final PasswordEncoder passwordEncoder;
 
     public DataInitializer(RoleRepository roleRepository, UserRepository userRepository,
+                          EmployeeRepository employeeRepository,
                           PasswordEncoder passwordEncoder) {
         this.roleRepository = roleRepository;
         this.userRepository = userRepository;
+        this.employeeRepository = employeeRepository;
         this.passwordEncoder = passwordEncoder;
     }
 
     @Override
     @Transactional
     public void run(String... args) throws Exception {
-
-        if (userRepository.findByUsername("admin").isPresent()) {
-            return;
-        }
 
         ObjectMapper mapper = new ObjectMapper();
 
@@ -68,26 +69,38 @@ public class DataInitializer implements CommandLineRunner {
         }
 
         // Create default admin user and assign ADMIN role
+        User adminUser;
         if (userRepository.findByUsername("admin").isEmpty()) {
             User u = new User();
             u.setUsername("admin");
             u.setPassword(passwordEncoder.encode("admin"));
             u.setActive(true);
             u.setIsAdmin(true);
-            
-            // Assign ADMIN role to admin user (creates user_roles entry)
             u.addRole(adminRole);
-            
-            userRepository.save(u);
+            adminUser = userRepository.save(u);
         } else {
-            // If admin user exists, ensure it has ADMIN role
-            User existingAdmin = userRepository.findByUsername("admin").get();
-            boolean hasAdminRole = existingAdmin.getRoles().stream()
+            adminUser = userRepository.findByUsername("admin").get();
+            boolean hasAdminRole = adminUser.getRoles().stream()
                     .anyMatch(r -> "ADMIN".equals(r.getName()));
             if (!hasAdminRole) {
-                existingAdmin.addRole(adminRole);
-                userRepository.save(existingAdmin);
+                adminUser.addRole(adminRole);
+                adminUser = userRepository.save(adminUser);
             }
+        }
+
+        if (adminUser.getEmployee() == null) {
+            Employee employee = employeeRepository.findByEmail("admin@local").orElseGet(() -> {
+                Employee e = new Employee();
+                e.setFullName("System Admin");
+                e.setEmployeeCode("ADMIN_PROFILE");
+                e.setEmail("admin@local");
+                e.setPhone("0000000000");
+                e.setStatus("ACTIVE");
+                return employeeRepository.save(e);
+            });
+
+            adminUser.setEmployee(employee);
+            userRepository.save(adminUser);
         }
     }
 } 

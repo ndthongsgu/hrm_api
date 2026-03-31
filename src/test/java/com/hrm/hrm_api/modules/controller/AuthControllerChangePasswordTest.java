@@ -4,7 +4,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hrm.hrm_api.common.security.UserDetailsImpl;
 import com.hrm.hrm_api.common.security.UserDetailsServiceImpl;
 import com.hrm.hrm_api.common.util.JwtUtils;
+import com.hrm.hrm_api.modules.entity.Employee;
 import com.hrm.hrm_api.modules.entity.User;
+import com.hrm.hrm_api.modules.repository.EmployeeRepository;
 import com.hrm.hrm_api.modules.repository.UserRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -29,6 +31,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -38,6 +41,7 @@ class AuthControllerChangePasswordTest {
     private final JwtUtils jwtUtils = mock(JwtUtils.class);
     private final UserDetailsServiceImpl userDetailsService = mock(UserDetailsServiceImpl.class);
     private final UserRepository userRepository = mock(UserRepository.class);
+    private final EmployeeRepository employeeRepository = mock(EmployeeRepository.class);
     private final PasswordEncoder passwordEncoder = mock(PasswordEncoder.class);
 
     private final AuthController controller = new AuthController(
@@ -45,6 +49,7 @@ class AuthControllerChangePasswordTest {
             jwtUtils,
             userDetailsService,
             userRepository,
+                employeeRepository,
             new ObjectMapper(),
             passwordEncoder
     );
@@ -63,6 +68,66 @@ class AuthControllerChangePasswordTest {
                         .content("{\"oldPassword\":\"old123\",\"newPassword\":\"new123\"}"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.message").value("User not authenticated"));
+    }
+
+    @Test
+    void updateMe_returnsUnauthorized_whenUserNotAuthenticated() throws Exception {
+        mockMvc.perform(put("/api/auth/me")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"fullName\":\"Nguyen Van A\"}"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.message").value("User not authenticated"));
+    }
+
+    @Test
+    void updateMe_updatesEmployeeProfile_whenInputValid() throws Exception {
+        UUID userId = UUID.randomUUID();
+        UUID employeeId = UUID.randomUUID();
+        authenticateAs(userId, "PAYROLL_READ");
+
+        Employee employee = new Employee();
+        employee.setId(employeeId);
+        employee.setFullName("Old Name");
+        employee.setEmail("old@example.com");
+
+        User user = new User();
+        user.setId(userId);
+        user.setUsername("admin");
+        user.setEmployee(employee);
+
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(employeeRepository.findByEmail("new@example.com")).thenReturn(Optional.empty());
+
+        mockMvc.perform(put("/api/auth/me")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"fullName\":\"New Name\",\"email\":\"new@example.com\",\"phone\":\"0123456789\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.username").value("admin"))
+                .andExpect(jsonPath("$.data.name").value("New Name"))
+                .andExpect(jsonPath("$.data.email").value("new@example.com"));
+
+        verify(employeeRepository).save(employee);
+        verify(userRepository).save(user);
+    }
+
+    @Test
+    void updateMe_returnsBadRequest_whenUserHasNoEmployeeButProfileFieldsProvided() throws Exception {
+        UUID userId = UUID.randomUUID();
+        authenticateAs(userId, "PAYROLL_READ");
+
+        User user = new User();
+        user.setId(userId);
+        user.setUsername("admin");
+        user.setEmployee(null);
+
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+
+        mockMvc.perform(put("/api/auth/me")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"fullName\":\"New Name\",\"email\":\"new@example.com\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Tài khoản chưa liên kết nhân viên, không thể cập nhật thông tin cá nhân"));
     }
 
     @Test

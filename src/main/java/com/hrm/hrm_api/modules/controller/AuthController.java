@@ -9,9 +9,12 @@ import com.hrm.hrm_api.modules.dto.base.BaseResponse;
 import com.hrm.hrm_api.modules.dto.request.ChangePasswordRequest;
 import com.hrm.hrm_api.modules.dto.request.LoginRequest;
 import com.hrm.hrm_api.modules.dto.request.RefreshTokenRequest;
+import com.hrm.hrm_api.modules.dto.request.UpdateMeRequest;
 import com.hrm.hrm_api.modules.dto.response.UserInfoResponse;
+import com.hrm.hrm_api.modules.entity.Employee;
 import com.hrm.hrm_api.modules.entity.Role;
 import com.hrm.hrm_api.modules.entity.User;
+import com.hrm.hrm_api.modules.repository.EmployeeRepository;
 import com.hrm.hrm_api.modules.repository.UserRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -33,14 +36,16 @@ public class AuthController {
     private final JwtUtils jwtUtils;
     private final UserDetailsServiceImpl userDetailsService;
     private final UserRepository userRepository;
+    private final EmployeeRepository employeeRepository;
     private final ObjectMapper objectMapper;
     private final PasswordEncoder passwordEncoder;
 
-    public AuthController(AuthenticationManager authenticationManager, JwtUtils jwtUtils, UserDetailsServiceImpl userDetailsService, UserRepository userRepository, ObjectMapper objectMapper, PasswordEncoder passwordEncoder) {
+    public AuthController(AuthenticationManager authenticationManager, JwtUtils jwtUtils, UserDetailsServiceImpl userDetailsService, UserRepository userRepository, EmployeeRepository employeeRepository, ObjectMapper objectMapper, PasswordEncoder passwordEncoder) {
         this.authenticationManager = authenticationManager;
         this.jwtUtils = jwtUtils;
         this.userDetailsService = userDetailsService;
         this.userRepository = userRepository;
+        this.employeeRepository = employeeRepository;
         this.objectMapper = objectMapper;
         this.passwordEncoder = passwordEncoder;
     }
@@ -178,7 +183,8 @@ public class AuthController {
                     user.getUsername(),
                     Boolean.TRUE.equals(user.getIsAdmin()),
                     false, // isGoogle - not supported yet
-                    permissions
+                    permissions,
+                    UserInfoResponse.fromEmployee(user.getEmployee())
             );
 
             return ResponseEntity.ok(BaseResponse.ok(userInfo));
@@ -186,6 +192,90 @@ public class AuthController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(BaseResponse.error("Failed to get user info: " + e.getMessage()));
         }
+    }
+
+    @PutMapping("/me")
+    public ResponseEntity<BaseResponse<UserInfoResponse>> updateMe(@RequestBody UpdateMeRequest request) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !(authentication.getPrincipal() instanceof UserDetailsImpl userDetails)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(BaseResponse.error("User not authenticated"));
+        }
+
+        Optional<User> userOpt = userRepository.findById(userDetails.getId());
+        if (userOpt.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(BaseResponse.error("User not found"));
+        }
+
+        User user = userOpt.get();
+        boolean hasProfileFields = (request.getFullName() != null && !request.getFullName().isBlank())
+            || (request.getEmail() != null && !request.getEmail().isBlank())
+            || (request.getPhone() != null && !request.getPhone().isBlank())
+            || (request.getAddress() != null && !request.getAddress().isBlank());
+
+        if (request.getUsername() != null && !request.getUsername().isBlank()
+                && !request.getUsername().equals(user.getUsername())) {
+            Optional<User> existing = userRepository.findByUsername(request.getUsername());
+            if (existing.isPresent() && !existing.get().getId().equals(user.getId())) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(BaseResponse.error("Tên đăng nhập đã tồn tại"));
+            }
+            user.setUsername(request.getUsername());
+        }
+
+        if (user.getEmployee() == null && hasProfileFields) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(BaseResponse.error("Tài khoản chưa liên kết nhân viên, không thể cập nhật thông tin cá nhân"));
+        }
+
+        if (user.getEmployee() != null) {
+            Employee employee = user.getEmployee();
+
+            if (request.getEmail() != null && !request.getEmail().isBlank()
+                    && !request.getEmail().equals(employee.getEmail())) {
+                Optional<Employee> existingEmployee = employeeRepository.findByEmail(request.getEmail());
+                if (existingEmployee.isPresent() && !existingEmployee.get().getId().equals(employee.getId())) {
+                    return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                            .body(BaseResponse.error("Email đã tồn tại"));
+                }
+                employee.setEmail(request.getEmail());
+            }
+
+            if (request.getFullName() != null && !request.getFullName().isBlank()) {
+                employee.setFullName(request.getFullName());
+            }
+            if (request.getPhone() != null && !request.getPhone().isBlank()) {
+                employee.setPhone(request.getPhone());
+            }
+            if (request.getAddress() != null && !request.getAddress().isBlank()) {
+                employee.setAddress(request.getAddress());
+            }
+
+            employeeRepository.save(employee);
+        }
+
+        userRepository.save(user);
+
+        Map<String, List<String>> permissions = parsePermissionsFromRoles(user.getRoles());
+        String email = user.getEmployee() != null && user.getEmployee().getEmail() != null
+                ? user.getEmployee().getEmail()
+                : user.getUsername();
+        String name = user.getEmployee() != null && user.getEmployee().getFullName() != null
+                ? user.getEmployee().getFullName()
+                : user.getUsername();
+
+        UserInfoResponse response = new UserInfoResponse(
+                user.getId().toString(),
+                user.getUsername(),
+                email,
+                name,
+                Boolean.TRUE.equals(user.getIsAdmin()),
+                false,
+            permissions,
+            UserInfoResponse.fromEmployee(user.getEmployee()));
+
+        return ResponseEntity.ok(BaseResponse.ok(response));
     }
 
     @PostMapping("/change-password")
