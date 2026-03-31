@@ -80,6 +80,19 @@ class PayslipControllerExportTest {
                 .andExpect(status().isForbidden());
     }
 
+        @Test
+        void exportMonthlyReport_returnsBadRequestWhenNoApprovedPayslipsExist() throws Exception {
+                UUID payrollPeriodId = UUID.randomUUID();
+                authenticateAs("PAYROLL_EXPORT");
+                when(payslipService.exportMonthlyReport(payrollPeriodId))
+                                .thenThrow(new IllegalStateException("Không có phiếu lương đã duyệt để xuất báo cáo"));
+
+                mockMvc.perform(get("/api/payslips/export/monthly-report/{payrollPeriodId}", payrollPeriodId)
+                                                .accept(MediaType.APPLICATION_PDF))
+                                .andExpect(status().isBadRequest())
+                                .andExpect(jsonPath("$.message").value("Thao tác không hợp lệ: Không có phiếu lương đã duyệt để xuất báo cáo"));
+        }
+
     @Test
     void exportMonthlyReport_returnsSanitizedServerErrorWhenPdfGenerationFails() throws Exception {
         UUID payrollPeriodId = UUID.randomUUID();

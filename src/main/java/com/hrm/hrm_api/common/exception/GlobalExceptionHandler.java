@@ -42,6 +42,13 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(new ErrorResponse("Lỗi kiểm định", ex.getMessage(), Instant.now()), HttpStatus.BAD_REQUEST);
     }
 
+    @ExceptionHandler(BadRequestException.class)
+    public ResponseEntity<BaseResponse<Object>> handleBadRequest(BadRequestException ex) {
+        return new ResponseEntity<>(
+                BaseResponse.error("Yêu cầu không hợp lệ: " + ex.getMessage()),
+                HttpStatus.BAD_REQUEST);
+    }
+
     @ExceptionHandler(BadCredentialsException.class)
     public ResponseEntity<BaseResponse<Object>> handleBadCredentials(BadCredentialsException ex) {
         return new ResponseEntity<>(BaseResponse.error("Tên đăng nhập hoặc mật khẩu không chính xác"), HttpStatus.UNAUTHORIZED);

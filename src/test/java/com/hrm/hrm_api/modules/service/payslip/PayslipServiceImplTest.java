@@ -77,7 +77,7 @@ class PayslipServiceImplTest {
                 IllegalStateException.class,
                 () -> service.exportMonthlyReport(period.getId()));
 
-        assertTrue(ex.getMessage().contains("không thể xuất"));
+        assertEquals("Không có kỳ lương đã duyệt để xuất báo cáo", ex.getMessage());
     }
 
     @Test
@@ -114,7 +114,67 @@ class PayslipServiceImplTest {
                 IllegalStateException.class,
                 () -> service.exportMonthlyReport(period.getId()));
 
-        assertTrue(ex.getMessage().contains("không thể xuất"));
+        assertEquals("Không có kỳ lương đã duyệt để xuất báo cáo", ex.getMessage());
+    }
+
+    @Test
+    void findByEmployeeAndPayrollPeriod_throwsWhenPayrollPeriodNotApproved() {
+        UUID payrollPeriodId = UUID.randomUUID();
+        UUID employeeId = UUID.randomUUID();
+        PayrollPeriod period = new PayrollPeriod();
+        period.setId(payrollPeriodId);
+        period.setStatus(PayrollPeriod.Status.PENDING);
+        period.setIsDeleted(false);
+
+        when(payrollPeriodRepository.findById(payrollPeriodId)).thenReturn(Optional.of(period));
+
+        IllegalStateException ex = assertThrows(
+                IllegalStateException.class,
+                () -> service.findByEmployeeAndPayrollPeriod(employeeId, payrollPeriodId));
+
+        assertEquals("Không tìm thấy kỳ lương đã duyệt", ex.getMessage());
+    }
+
+    @Test
+    void findByEmployeeAndPayrollPeriod_throwsWhenApprovedPayslipMissing() {
+        UUID payrollPeriodId = UUID.randomUUID();
+        UUID employeeId = UUID.randomUUID();
+        PayrollPeriod period = new PayrollPeriod();
+        period.setId(payrollPeriodId);
+        period.setStatus(PayrollPeriod.Status.APPROVED);
+        period.setIsDeleted(false);
+
+        when(payrollPeriodRepository.findById(payrollPeriodId)).thenReturn(Optional.of(period));
+        when(payslipRepository.findByPayrollPeriodAndEmployeeAndApprovedStatus(payrollPeriodId, employeeId, false))
+                .thenReturn(null);
+
+        IllegalStateException ex = assertThrows(
+                IllegalStateException.class,
+                () -> service.findByEmployeeAndPayrollPeriod(employeeId, payrollPeriodId));
+
+        assertEquals("Không tìm thấy phiếu lương đã duyệt", ex.getMessage());
+    }
+
+    @Test
+    void findByEmployeeAndPayrollPeriod_returnsApprovedPayslip() {
+        UUID payrollPeriodId = UUID.randomUUID();
+        UUID employeeId = UUID.randomUUID();
+        PayrollPeriod period = new PayrollPeriod();
+        period.setId(payrollPeriodId);
+        period.setStatus(PayrollPeriod.Status.APPROVED);
+        period.setIsDeleted(false);
+
+        Payslip payslip = new Payslip();
+        payslip.setId(UUID.randomUUID());
+        payslip.setStatus(Payslip.Status.APPROVED);
+
+        when(payrollPeriodRepository.findById(payrollPeriodId)).thenReturn(Optional.of(period));
+        when(payslipRepository.findByPayrollPeriodAndEmployeeAndApprovedStatus(payrollPeriodId, employeeId, false))
+                .thenReturn(payslip);
+
+        Payslip result = service.findByEmployeeAndPayrollPeriod(employeeId, payrollPeriodId);
+
+        assertEquals(payslip, result);
     }
 
     @Test

@@ -148,18 +148,21 @@ public class PayslipServiceImpl implements PayslipService {
 
     @Override
     public Payslip findByEmployeeAndPayrollPeriod(UUID employeeId, UUID payrollPeriodId) {
-        return payslipRepository.findByPayrollPeriodAndEmployeeAndApprovedStatus(payrollPeriodId, employeeId, false);
+        requireApprovedPayrollPeriod(payrollPeriodId, "Không tìm thấy kỳ lương đã duyệt");
+
+        Payslip payslip = payslipRepository.findByPayrollPeriodAndEmployeeAndApprovedStatus(payrollPeriodId, employeeId, false);
+        if (payslip == null) {
+            throw new IllegalStateException("Không tìm thấy phiếu lương đã duyệt");
+        }
+        return payslip;
     }
 
     @Override
     @Transactional(readOnly = true)
     public MonthlyPayrollReportExport exportMonthlyReport(UUID payrollPeriodId) {
-        PayrollPeriod period = payrollPeriodRepository.findById(payrollPeriodId)
-                .orElseThrow(() -> new ResourceNotFoundException(PayrollPeriod.class, payrollPeriodId));
-
-        if (period.getStatus() != PayrollPeriod.Status.APPROVED || Boolean.TRUE.equals(period.getIsDeleted())) {
-            throw new IllegalStateException("Kỳ lương này không thể xuất báo cáo");
-        }
+        PayrollPeriod period = requireApprovedPayrollPeriod(
+                payrollPeriodId,
+                "Không có kỳ lương đã duyệt để xuất báo cáo");
 
         List<Payslip> payslips = payslipRepository
                 .findByPayrollPeriodIdAndStatusAndIsDeletedOrderByEmployee_EmployeeCodeAscEmployee_FullNameAsc(
@@ -180,6 +183,17 @@ public class PayslipServiceImpl implements PayslipService {
                 content,
                 buildAsciiFilename(period.getName()),
                 buildUtf8Filename(period.getName()));
+    }
+
+    private PayrollPeriod requireApprovedPayrollPeriod(UUID payrollPeriodId, String invalidStateMessage) {
+        PayrollPeriod period = payrollPeriodRepository.findById(payrollPeriodId)
+                .orElseThrow(() -> new ResourceNotFoundException(PayrollPeriod.class, payrollPeriodId));
+
+        if (period.getStatus() != PayrollPeriod.Status.APPROVED || Boolean.TRUE.equals(period.getIsDeleted())) {
+            throw new IllegalStateException(invalidStateMessage);
+        }
+
+        return period;
     }
 
     @Override

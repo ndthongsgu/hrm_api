@@ -12,6 +12,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -91,18 +92,24 @@ public class PayslipController {
         return ResponseEntity.ok(BaseResponse.ok("Duyệt phiếu lương thành công"));
     }
 
-    @GetMapping("/export/monthly-report/{payrollPeriodId}")
+    @GetMapping(value = "/export/monthly-report/{payrollPeriodId}", produces = {MediaType.APPLICATION_PDF_VALUE, MediaType.APPLICATION_JSON_VALUE})
     @RequirePermission(module = "PAYROLL", action = PermissionDefinition.EXPORT)
-    public ResponseEntity<byte[]> exportMonthlyReport(@PathVariable UUID payrollPeriodId) {
-        MonthlyPayrollReportExport export = service.exportMonthlyReport(payrollPeriodId);
+        public ResponseEntity<?> exportMonthlyReport(@PathVariable UUID payrollPeriodId) {
+        try {
+            MonthlyPayrollReportExport export = service.exportMonthlyReport(payrollPeriodId);
 
-        String disposition = "attachment; filename=\"" + export.asciiFilename() + "\"; filename*=UTF-8''"
+            String disposition = "attachment; filename=\"" + export.asciiFilename() + "\"; filename*=UTF-8''"
                 + UriUtils.encode(export.utf8Filename(), StandardCharsets.UTF_8);
 
-        return ResponseEntity.ok()
+            return ResponseEntity.ok()
                 .contentType(MediaType.APPLICATION_PDF)
                 .header(HttpHeaders.CONTENT_DISPOSITION, disposition)
                 .body(export.content());
+        } catch (IllegalStateException ex) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(BaseResponse.error("Thao tác không hợp lệ: " + ex.getMessage()));
+        }
     }
 
     // Lấy phiếu lương của một nhân viên trong kỳ lương cụ thể (API cho app mobile)
