@@ -31,3 +31,9 @@ build/
 
 ### VS Code ###
 .vscode/
+
+# Local database exports and generated payroll dumps
+backup_hrm_*.sql
+db.sql
+generated_payroll_data.sql
+generated_payroll_data.sql.bak
