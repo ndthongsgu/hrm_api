@@ -6,6 +6,7 @@ import com.hrm.hrm_api.common.security.UserDetailsImpl;
 import com.hrm.hrm_api.common.security.UserDetailsServiceImpl;
 import com.hrm.hrm_api.common.util.JwtUtils;
 import com.hrm.hrm_api.modules.dto.base.BaseResponse;
+import com.hrm.hrm_api.modules.dto.request.ChangePasswordRequest;
 import com.hrm.hrm_api.modules.dto.request.LoginRequest;
 import com.hrm.hrm_api.modules.dto.request.RefreshTokenRequest;
 import com.hrm.hrm_api.modules.dto.response.UserInfoResponse;
@@ -19,6 +20,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
@@ -32,13 +34,15 @@ public class AuthController {
     private final UserDetailsServiceImpl userDetailsService;
     private final UserRepository userRepository;
     private final ObjectMapper objectMapper;
+    private final PasswordEncoder passwordEncoder;
 
-    public AuthController(AuthenticationManager authenticationManager, JwtUtils jwtUtils, UserDetailsServiceImpl userDetailsService, UserRepository userRepository, ObjectMapper objectMapper) {
+    public AuthController(AuthenticationManager authenticationManager, JwtUtils jwtUtils, UserDetailsServiceImpl userDetailsService, UserRepository userRepository, ObjectMapper objectMapper, PasswordEncoder passwordEncoder) {
         this.authenticationManager = authenticationManager;
         this.jwtUtils = jwtUtils;
         this.userDetailsService = userDetailsService;
         this.userRepository = userRepository;
         this.objectMapper = objectMapper;
+        this.passwordEncoder = passwordEncoder;
     }
 
     @PostMapping("/login")
@@ -182,6 +186,43 @@ public class AuthController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(BaseResponse.error("Failed to get user info: " + e.getMessage()));
         }
+    }
+
+    @PostMapping("/change-password")
+    public ResponseEntity<BaseResponse<String>> changePassword(@RequestBody ChangePasswordRequest request) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !(authentication.getPrincipal() instanceof UserDetailsImpl userDetails)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(BaseResponse.error("User not authenticated"));
+        }
+
+        if (request.getOldPassword() == null || request.getOldPassword().isBlank()
+                || request.getNewPassword() == null || request.getNewPassword().isBlank()) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(BaseResponse.error("Mật khẩu cũ và mật khẩu mới là bắt buộc"));
+        }
+
+        if (request.getOldPassword().equals(request.getNewPassword())) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(BaseResponse.error("Mật khẩu mới phải khác mật khẩu cũ"));
+        }
+
+        Optional<User> userOpt = userRepository.findById(userDetails.getId());
+        if (userOpt.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(BaseResponse.error("User not found"));
+        }
+
+        User user = userOpt.get();
+        if (!passwordEncoder.matches(request.getOldPassword(), user.getPassword())) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(BaseResponse.error("Mật khẩu cũ không chính xác"));
+        }
+
+        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        userRepository.save(user);
+
+        return ResponseEntity.ok(BaseResponse.ok("Đổi mật khẩu thành công"));
     }
 
     /**
