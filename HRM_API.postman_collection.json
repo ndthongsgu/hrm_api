@@ -40,7 +40,7 @@
                                 "exec": [
                                     "if (pm.response.code === 200) {",
                                     "    var jsonData = pm.response.json();",
-                                    "    var accessToken = jsonData.token;",
+                                    "    var accessToken = jsonData.accessToken;",
                                     "    ",
                                     "    // Save access token to collection and environment variables",
                                     "    pm.collectionVariables.set(\"jwt_token\", accessToken);",
@@ -49,7 +49,7 @@
                                     "    // Log authentication details",
                                     "    console.log(\"====== Authentication Successful ======\");",
                                     "    console.log(\"Access Token: \" + accessToken);",
-                                    "    console.log(\"Token Type: \" + jsonData.type);",
+                                    "    console.log(\"Token Type: \" + jsonData.tokenType);",
                                     "    console.log(\"User ID: \" + jsonData.id);",
                                     "    console.log(\"Username: \" + jsonData.username);",
                                     "    console.log(\"Email: \" + jsonData.email);",
@@ -87,7 +87,7 @@
                                 "login"
                             ]
                         },
-                        "description": "Authenticate user and receive JWT access token. The access token (jsonData.token) is automatically extracted and saved to the 'jwt_token' variable for use in all subsequent authenticated requests."
+                        "description": "Authenticate user and receive JWT access token. The access token (jsonData.accessToken) is automatically extracted and saved to the 'jwt_token' variable for use in all subsequent authenticated requests."
                     },
                     "response": []
                 }
