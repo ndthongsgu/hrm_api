@@ -4,6 +4,7 @@ import com.hrm.hrm_api.common.constants.PermissionDefinition;
 import com.hrm.hrm_api.config.annotations.RequirePermission;
 import com.hrm.hrm_api.modules.dto.base.BaseResponse;
 import com.hrm.hrm_api.modules.dto.base.PageResponse;
+import com.hrm.hrm_api.modules.dto.request.UserRoleAssignRequest;
 import com.hrm.hrm_api.modules.dto.response.UserResponse;
 import com.hrm.hrm_api.modules.entity.User;
 import com.hrm.hrm_api.modules.mapper.UserMapper;
@@ -67,6 +68,14 @@ public class UserController {
     @RequirePermission(module = "PERMISSION", action = PermissionDefinition.UPDATE)
     public ResponseEntity<BaseResponse<UserResponse>> update(@PathVariable UUID id, @Valid @RequestBody User payload) {
         User updated = service.update(id, payload);
+        return ResponseEntity.ok(BaseResponse.ok(UserMapper.toResponse(updated)));
+    }
+
+    @PutMapping("/{id}/roles")
+    @Transactional
+    @RequirePermission(module = "PERMISSION", action = PermissionDefinition.UPDATE)
+    public ResponseEntity<BaseResponse<UserResponse>> assignRoles(@PathVariable UUID id, @RequestBody UserRoleAssignRequest payload) {
+        User updated = service.assignRoles(id, payload == null ? null : payload.getRoleIds());
         return ResponseEntity.ok(BaseResponse.ok(UserMapper.toResponse(updated)));
     }
 

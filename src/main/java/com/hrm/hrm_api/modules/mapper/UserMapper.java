@@ -34,24 +34,28 @@ public class UserMapper {
         // Use the existing getRoles() method which returns Set<Role>
         // This method is safe to use within a transaction context
         List<String> roleNames = List.of();
+        List<UUID> roleIds = List.of();
         try {
             // Initialize the userRoles collection if it's a proxy
             if (user.getUserRoles() != null) {
                 Hibernate.initialize(user.getUserRoles());
-                
+
                 // Get role names using the helper method
-                roleNames = user.getRoles().stream()
-                        .map(role -> {
+                var roles = user.getRoles().stream()
+                        .peek(role -> {
                             // Initialize role if it's a proxy
                             Hibernate.initialize(role);
-                            return role.getName();
                         })
                         .collect(Collectors.toList());
+
+                roleNames = roles.stream().map(role -> role.getName()).collect(Collectors.toList());
+                roleIds = roles.stream().map(role -> role.getId()).collect(Collectors.toList());
             }
         } catch (Exception e) {
             // If lazy loading fails (outside transaction), return empty list
             // This should not happen if called within @Transactional method
             roleNames = List.of();
+            roleIds = List.of();
         }
 
         // Safely get employee ID
@@ -71,7 +75,8 @@ public class UserMapper {
                 user.getActive(),
                 user.getIsAdmin(),
                 employeeId,
-                roleNames
+                roleNames,
+                roleIds
         );
     }
 }

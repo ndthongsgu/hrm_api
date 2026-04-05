@@ -39,9 +39,13 @@ public class RoleServiceImpl implements RoleService {
     @Override
     @Transactional
     public Role update(UUID id, Role entity) {
-        findById(id);
-        entity.setId(id);
-        return roleRepository.save(entity);
+        Role existing = findById(id);
+
+        existing.setName(entity.getName());
+        existing.setDescription(entity.getDescription());
+        existing.setPermissionsJson(entity.getPermissionsJson());
+
+        return roleRepository.save(existing);
     }
 
     @Override
@@ -59,7 +63,6 @@ public class RoleServiceImpl implements RoleService {
             return roleRepository.findAll(pageable);
         }
         return roleRepository.findByFilters(
-                filters.getCode(),
                 filters.getName(),
                 filters.getIsActive(),
                 pageable
