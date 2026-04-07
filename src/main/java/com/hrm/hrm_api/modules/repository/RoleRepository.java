@@ -15,12 +15,10 @@ import java.util.UUID;
 public interface RoleRepository extends JpaRepository<Role, UUID> {
     @Query(value = """
         SELECT * FROM roles r
-        WHERE (:code IS NULL OR LOWER(r.code) LIKE LOWER(CONCAT('%', :code, '%')))
-        AND (:name IS NULL OR LOWER(r.name) LIKE LOWER(CONCAT('%', :name, '%')))
-        AND (:isActive IS NULL OR r.is_active = :isActive)
+        WHERE (:name IS NULL OR LOWER(r.name) LIKE LOWER(CONCAT('%', :name, '%')))
+        AND (:isActive IS NULL OR r.is_deleted = NOT :isActive)
         """, nativeQuery = true)
     Page<Role> findByFilters(
-            @Param("code") String code,
             @Param("name") String name,
             @Param("isActive") Boolean isActive,
             Pageable pageable

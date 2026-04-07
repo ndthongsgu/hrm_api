@@ -14,6 +14,7 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.util.UUID;
+import java.util.List;
 
 import jakarta.validation.Valid;
 
@@ -33,6 +34,14 @@ public class RoleController {
         Page<Role> page = service.findAll(pageable);
                 return ResponseEntity.ok(BaseResponse.ok(PaginationUtils.toPageResponse(page)));
     }
+
+    @GetMapping("/select")
+    @RequirePermission(module = "ROLE", action = PermissionDefinition.READ)
+    public ResponseEntity<BaseResponse<List<Role>>> select() {
+        List<Role> roles = service.findAll(org.springframework.data.domain.Pageable.unpaged()).getContent();
+        return ResponseEntity.ok(BaseResponse.ok(roles));
+    }
+
     @PostMapping
     public ResponseEntity<BaseResponse<PageResponse<Role>>> search(
             @RequestBody(required = false) RoleSearchRequest request) {

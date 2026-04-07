@@ -3,12 +3,15 @@ package com.hrm.hrm_api.modules.controller;
 import com.hrm.hrm_api.common.security.UserDetailsImpl;
 import com.hrm.hrm_api.modules.dto.base.BaseResponse;
 import com.hrm.hrm_api.modules.dto.base.PageResponse;
+import com.hrm.hrm_api.modules.dto.request.ContractSearchRequest;
+import com.hrm.hrm_api.modules.dto.request.ContractRequestDto;
 import com.hrm.hrm_api.modules.dto.response.ContractResponseDto;
 import com.hrm.hrm_api.modules.entity.Contract;
 import com.hrm.hrm_api.modules.entity.User;
 import com.hrm.hrm_api.modules.repository.UserRepository;
 import com.hrm.hrm_api.modules.service.contract.ContractService;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
@@ -43,6 +46,28 @@ public class ContractController {
                 .toList();
         PageResponse<ContractResponseDto> response = PageResponse.of(
                 items,
+                page.getTotalElements(),
+                page.getNumber(),
+                page.getSize()
+        );
+        return ResponseEntity.ok(BaseResponse.ok(response));
+    }
+
+    @PostMapping("/search")
+    public ResponseEntity<BaseResponse<PageResponse<ContractResponseDto>>> search(@RequestBody(required = false) ContractSearchRequest request) {
+        if (request == null) {
+            request = new ContractSearchRequest();
+        }
+        int take = request.getTake() != null && request.getTake() > 0 ? request.getTake() : 20;
+        int skip = request.getSkip() != null && request.getSkip() >= 0 ? request.getSkip() : 0;
+
+        Page<Contract> page = contractService.search(
+                PageRequest.of(skip / take, take),
+                request.getWhere()
+        );
+
+        PageResponse<ContractResponseDto> response = PageResponse.of(
+                page.getContent().stream().map(ContractResponseDto::fromEntity).toList(),
                 page.getTotalElements(),
                 page.getNumber(),
                 page.getSize()
@@ -104,12 +129,12 @@ public class ContractController {
     }
 
     @PostMapping
-    public ResponseEntity<BaseResponse<ContractResponseDto>> create(@Valid @RequestBody Contract payload) {
+    public ResponseEntity<BaseResponse<ContractResponseDto>> create(@Valid @RequestBody ContractRequestDto payload) {
         return ResponseEntity.ok(BaseResponse.ok(ContractResponseDto.fromEntity(contractService.create(payload))));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<BaseResponse<ContractResponseDto>> update(@PathVariable java.util.UUID id, @Valid @RequestBody Contract payload) {
+    public ResponseEntity<BaseResponse<ContractResponseDto>> update(@PathVariable java.util.UUID id, @Valid @RequestBody ContractRequestDto payload) {
         return ResponseEntity.ok(BaseResponse.ok(ContractResponseDto.fromEntity(contractService.update(id, payload))));
     }
 

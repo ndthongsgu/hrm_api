@@ -45,17 +45,13 @@ public class User extends BaseEntity {
     public void addRole(Role role) {
         UserRole userRole = new UserRole(this, role);
         userRoles.add(userRole);
-        if (role.getUserRoles() == null) {
-            role.setUserRoles(new HashSet<>());
-        }
-        role.getUserRoles().add(userRole);
+        // Only manage user side to avoid bi-directional modification issues
+        // Hibernate handles the relationship from the owning side (user_roles table)
     }
 
     public void removeRole(Role role) {
         userRoles.removeIf(ur -> ur.getRole().equals(role));
-        if (role.getUserRoles() != null) {
-            role.getUserRoles().removeIf(ur -> ur.getUser().equals(this));
-        }
+        // Only manage user side
     }
 
     public Set<Role> getRoles() {

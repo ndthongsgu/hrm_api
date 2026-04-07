@@ -13,5 +13,6 @@ public record UserResponse(
     Boolean active,
     Boolean isAdmin,
     UUID employeeId,
-    List<String> roles
+    List<String> roles,
+    List<UUID> roleIds
 ) {}

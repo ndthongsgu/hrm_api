@@ -2,7 +2,6 @@ package com.hrm.hrm_api.modules.entity;
 
 import jakarta.persistence.*;
 import lombok.NoArgsConstructor;
-import lombok.AllArgsConstructor;
 import lombok.Data;
 import com.fasterxml.jackson.annotation.JsonBackReference;
 
@@ -10,7 +9,6 @@ import com.fasterxml.jackson.annotation.JsonBackReference;
 @Table(name = "user_roles", uniqueConstraints = @UniqueConstraint(columnNames = {"user_id", "role_id"}))
 @Data
 @NoArgsConstructor
-@AllArgsConstructor
 @lombok.EqualsAndHashCode(callSuper = false, exclude = {"user", "role"})
 public class UserRole extends BaseEntity {
 
@@ -23,5 +21,11 @@ public class UserRole extends BaseEntity {
     @JoinColumn(name = "role_id")
     @JsonBackReference(value = "role-userRoles")
     private Role role;
+
+    // Custom constructor for assigning roles
+    public UserRole(User user, Role role) {
+        this.user = user;
+        this.role = role;
+    }
 
 }
