@@ -6,6 +6,7 @@ import com.hrm.hrm_api.modules.dto.base.BaseResponse;
 import com.hrm.hrm_api.modules.dto.base.PaginationResponse;
 import com.hrm.hrm_api.modules.dto.request.AttendanceSummaryCreateRequest;
 import com.hrm.hrm_api.modules.dto.request.AttendanceSummarySearchRequest;
+import com.hrm.hrm_api.modules.dto.request.BulkIdsRequest;
 import com.hrm.hrm_api.modules.entity.AttendanceSummary;
 import com.hrm.hrm_api.modules.service.attendancesummary.AttendanceSummaryService;
 import org.springframework.data.domain.Pageable;
@@ -15,6 +16,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -84,4 +86,33 @@ public class AttendanceSummaryController {
         return ResponseEntity.ok(BaseResponse.ok("Hủy duyệt công thành công"));
     }
 
+    /**
+     * Duyệt nhiều tổng hợp công theo danh sách
+     */
+    @PostMapping("/bulk-approve")
+    @RequirePermission(module = "PAYROLL", action = PermissionDefinition.APPROVE)
+    public ResponseEntity<BaseResponse<String>> bulkApprove(@RequestBody BulkIdsRequest request) {
+        String message = service.bulkApprove(request.getIds());
+        return ResponseEntity.ok(BaseResponse.ok(message));
+    }
+
+    /**
+     * Hủy duyệt nhiều tổng hợp công theo danh sách
+     */
+    @PostMapping("/bulk-unapprove")
+    @RequirePermission(module = "PAYROLL", action = PermissionDefinition.APPROVE)
+    public ResponseEntity<BaseResponse<String>> bulkUnApprove(@RequestBody BulkIdsRequest request) {
+        String message = service.bulkUnApprove(request.getIds());
+        return ResponseEntity.ok(BaseResponse.ok(message));
+    }
+
+    /**
+     * Lấy danh sách ID theo filter (không phân trang)
+     */
+    @PostMapping("/ids-by-filter")
+    @RequirePermission(module = "PAYROLL", action = PermissionDefinition.READ)
+    public ResponseEntity<BaseResponse<List<UUID>>> getIdsByFilter(@RequestBody(required = false) AttendanceSummarySearchRequest request) {
+        List<UUID> ids = service.getIdsByFilter(request);
+        return ResponseEntity.ok(BaseResponse.ok(ids));
+    }
 }

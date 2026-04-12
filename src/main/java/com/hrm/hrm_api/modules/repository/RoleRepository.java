@@ -1,7 +1,6 @@
 package com.hrm.hrm_api.modules.repository;
 
 import com.hrm.hrm_api.modules.entity.Role;
-import com.hrm.hrm_api.modules.dto.request.RoleSearchRequest;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;

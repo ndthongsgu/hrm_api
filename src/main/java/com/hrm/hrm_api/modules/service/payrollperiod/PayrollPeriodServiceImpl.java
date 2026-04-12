@@ -326,4 +326,26 @@ public class PayrollPeriodServiceImpl implements PayrollPeriodService {
                 .map(period -> new SelectOptionDto(period.getId(), period.getName()))
                 .collect(Collectors.toList());
     }
+
+    /**
+     * Duyệt nhiều kỳ lương theo danh sách
+     */
+    @Override
+    @Transactional
+    public void bulkApprove(List<UUID> ids) {
+        for (UUID id : ids) {
+            approve(id);
+        }
+    }
+
+    /**
+     * Hủy duyệt nhiều kỳ lương theo danh sách
+     */
+    @Override
+    @Transactional
+    public void bulkUnApprove(List<UUID> ids) {
+        for (UUID id : ids) {
+            unApprove(id);
+        }
+    }
 }

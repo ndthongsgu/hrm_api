@@ -6,6 +6,7 @@ import com.hrm.hrm_api.modules.dto.request.SalaryAdjustmentCreateRequest;
 import com.hrm.hrm_api.common.constants.PermissionDefinition;
 import com.hrm.hrm_api.config.annotations.RequirePermission;
 import com.hrm.hrm_api.modules.dto.request.SalaryAdjustmentSearchRequest;
+import com.hrm.hrm_api.modules.dto.request.BulkIdsRequest;
 import com.hrm.hrm_api.modules.entity.SalaryAdjustment;
 import com.hrm.hrm_api.modules.service.salaryadjustment.SalaryAdjustmentService;
 import org.springframework.data.domain.Pageable;
@@ -15,6 +16,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -88,5 +90,35 @@ public class SalaryAdjustmentController {
     public ResponseEntity<BaseResponse<String>> unApprove(@PathVariable UUID id) {
         service.unApprove(id);
         return ResponseEntity.ok(BaseResponse.ok("Hủy duyệt điều chỉnh lương thành công"));
+    }
+
+    /**
+     * Duyệt nhiều điều chỉnh lương theo danh sách
+     */
+    @PostMapping("/bulk-approve")
+    @RequirePermission(module = "PAYROLL", action = PermissionDefinition.APPROVE)
+    public ResponseEntity<BaseResponse<String>> bulkApprove(@RequestBody BulkIdsRequest request) {
+        String message = service.bulkApprove(request.getIds());
+        return ResponseEntity.ok(BaseResponse.ok(message));
+    }
+
+    /**
+     * Hủy duyệt nhiều điều chỉnh lương theo danh sách
+     */
+    @PostMapping("/bulk-unapprove")
+    @RequirePermission(module = "PAYROLL", action = PermissionDefinition.APPROVE)
+    public ResponseEntity<BaseResponse<String>> bulkUnApprove(@RequestBody BulkIdsRequest request) {
+        String message = service.bulkUnApprove(request.getIds());
+        return ResponseEntity.ok(BaseResponse.ok(message));
+    }
+
+    /**
+     * Lấy danh sách ID theo filter (không phân trang)
+     */
+    @PostMapping("/ids-by-filter")
+    @RequirePermission(module = "PAYROLL", action = PermissionDefinition.READ)
+    public ResponseEntity<BaseResponse<List<UUID>>> getIdsByFilter(@RequestBody(required = false) SalaryAdjustmentSearchRequest request) {
+        List<UUID> ids = service.getIdsByFilter(request);
+        return ResponseEntity.ok(BaseResponse.ok(ids));
     }
 }

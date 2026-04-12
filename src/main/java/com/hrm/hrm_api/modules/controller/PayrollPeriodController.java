@@ -100,6 +100,26 @@ public class PayrollPeriodController {
     }
 
     /**
+     * Duyệt nhiều kỳ lương theo danh sách
+     */
+    @PostMapping("/bulk-approve")
+    @RequirePermission(module = "PAYROLL", action = PermissionDefinition.APPROVE)
+    public ResponseEntity<BaseResponse<String>> bulkApprove(@RequestBody List<UUID> ids) {
+        service.bulkApprove(ids);
+        return ResponseEntity.ok(BaseResponse.ok("Duyệt nhiều kỳ lương thành công"));
+    }
+
+    /**
+     * Hủy duyệt nhiều kỳ lương theo danh sách
+     */
+    @PostMapping("/bulk-unapprove")
+    @RequirePermission(module = "PAYROLL", action = PermissionDefinition.APPROVE)
+    public ResponseEntity<BaseResponse<String>> bulkUnApprove(@RequestBody List<UUID> ids) {
+        service.bulkUnApprove(ids);
+        return ResponseEntity.ok(BaseResponse.ok("Hủy duyệt nhiều kỳ lương thành công"));
+    }
+
+    /**
      * Selectbox kỳ lương cho app mobile (Chỉ lấy nhưng kỳ lương đã duyệt)
      */
     @GetMapping("/mobile-select-options")

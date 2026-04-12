@@ -22,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 public class AttendanceSummaryServiceImpl implements AttendanceSummaryService {
@@ -159,8 +160,8 @@ public class AttendanceSummaryServiceImpl implements AttendanceSummaryService {
     public void unApprove(UUID id) {
         AttendanceSummary attendanceSummary = repository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(AttendanceSummary.class, id));
-        List<Payslip> payslips = payslipRepository.findByPayrollPeriodAndIsDeleted(attendanceSummary.getPayrollPeriod().getId(), false);
-        if (!payslips.isEmpty()) {
+        Payslip payslips = payslipRepository.findByPayrollPeriodAndEmployeeAndIsDeleted(attendanceSummary.getPayrollPeriod().getId(), attendanceSummary.getEmployee().getId(), false);
+        if (payslips != null) {
             throw new IllegalStateException("Không thể hủy duyệt công khi đã có phiếu lương liên quan.");
         }
         // Đánh dấu hủy duyệt
@@ -209,5 +210,68 @@ public class AttendanceSummaryServiceImpl implements AttendanceSummaryService {
                 "ATTENDANCE_SUMMARY",
                 "Kích hoạt tổng hợp công nhân viên: " + entity.getEmployee().getEmployeeCode(),
                 securityUtil.getCurrentUsername());
+    }
+
+    /**
+     * Duyệt nhiều tổng hợp công theo danh sách
+     */
+    @Override
+    public String bulkApprove(List<UUID> ids) {
+        int successCount = 0;
+        int failureCount = 0;
+        StringBuilder failures = new StringBuilder();
+
+        for (UUID id : ids) {
+            try {
+                approve(id);
+                successCount++;
+            } catch (Exception e) {
+                failureCount++;
+                failures.append("ID ").append(id).append(": ").append(e.getMessage()).append("; ");
+            }
+        }
+
+        String message = "Duyệt thành công " + successCount + " bản ghi";
+        if (failureCount > 0) {
+            message += ", thất bại " + failureCount + " bản ghi: " + failures.toString().trim();
+        }
+        return message;
+    }
+
+    /**
+     * Hủy duyệt nhiều tổng hợp công theo danh sách
+     */
+    @Override
+    public String bulkUnApprove(List<UUID> ids) {
+        int successCount = 0;
+        int failureCount = 0;
+        StringBuilder failures = new StringBuilder();
+
+        for (UUID id : ids) {
+            try {
+                unApprove(id);
+                successCount++;
+            } catch (Exception e) {
+                failureCount++;
+                failures.append("ID ").append(id).append(": ").append(e.getMessage()).append("; ");
+            }
+        }
+
+        String message = "Hủy duyệt thành công " + successCount + " bản ghi";
+        if (failureCount > 0) {
+            message += ", thất bại " + failureCount + " bản ghi: " + failures.toString().trim();
+        }
+        return message;
+    }
+
+    /**
+     * Lấy danh sách ID theo filter (không phân trang)
+     */
+    @Override
+    public List<UUID> getIdsByFilter(AttendanceSummarySearchRequest request) {
+        var filter = request != null ? request.getWhere() : null;
+        Specification<AttendanceSummary> spec = buildSpec(filter);
+        List<AttendanceSummary> summaries = repository.findAll(spec);
+        return summaries.stream().map(AttendanceSummary::getId).collect(Collectors.toList());
     }
 }

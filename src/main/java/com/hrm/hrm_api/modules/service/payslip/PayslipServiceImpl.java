@@ -38,6 +38,8 @@ import java.util.Locale;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
+
 
 @Service
 public class PayslipServiceImpl implements PayslipService {
@@ -407,8 +409,11 @@ public class PayslipServiceImpl implements PayslipService {
         // Giảm trừ cố định
         BigDecimal taxFixedDeduction = getSubtract(assessableIncome, calculationDate);
 
+        // Tính phần trăm thuế suất dựa trên thu nhập tính thuế
+        BigDecimal taxRate = getTaxRate(assessableIncome, calculationDate);
+
         // Thuế TNCN = (Thu nhập tính thuế x thuế suất) - Giảm trừ cố định
-        BigDecimal taxAmount = calculatePit(assessableIncome, calculationDate).subtract(taxFixedDeduction).max(ZERO);
+        BigDecimal taxAmount = assessableIncome.multiply(taxRate).divide(BigDecimal.valueOf(100)).subtract(taxFixedDeduction).max(ZERO);
 
         BigDecimal netSalary = taxableIncome
                 .add(nonTaxableAndInsurableAllowance)
@@ -442,6 +447,7 @@ public class PayslipServiceImpl implements PayslipService {
         payslip.setTaxFixedDeduction(taxFixedDeduction); // Giảm trừ cố định
         payslip.setAssessableIncome(assessableIncome); // Thu nhập tính thuế
         payslip.setTotalDeductions(totalDeductions); // Tổng giảm trừ
+        payslip.setTaxRate(taxRate); // Thuế suất (%)
         payslip.setTaxAmount(taxAmount); // Thuế TNCN
         payslip.setNetSalary(netSalary); // Lương thực nhận
         payslip.setCreatedBy(securityUtil.getCurrentUsername()); // Người tạo bảng lương
@@ -455,6 +461,34 @@ public class PayslipServiceImpl implements PayslipService {
                 securityUtil.getCurrentUsername());
 
         return savedPayslip;
+    }
+
+    /**
+     * Tạo nhiều phiếu lương cho danh sách nhân viên trong một kỳ lương
+     */
+    @Override
+    @Transactional
+    public String generateBulkForEmployees(UUID payrollPeriodId, List<UUID> employeeIds) {
+        int successCount = 0;
+        int failCount = 0;
+        StringBuilder errors = new StringBuilder();
+
+        for (UUID employeeId : employeeIds) {
+            try {
+                generateForEmployee(payrollPeriodId, employeeId);
+                successCount++;
+            } catch (Exception e) {
+                failCount++;
+                errors.append("Nhân viên ").append(employeeId).append(": ").append(e.getMessage()).append("; ");
+            }
+        }
+
+        String message = String.format("Tạo phiếu lương hoàn thành: %d thành công, %d thất bại.", successCount, failCount);
+        if (failCount > 0) {
+            message += " Lỗi: " + errors.toString();
+        }
+
+        return message;
     }
 
     /**
@@ -490,7 +524,7 @@ public class PayslipServiceImpl implements PayslipService {
         return normalizeRate(rate);
     }
 
-    private BigDecimal calculatePit(BigDecimal assessableIncome, LocalDate effectiveDate) {
+    private BigDecimal getTaxRate(BigDecimal assessableIncome, LocalDate effectiveDate) {
         List<TaxBracket> brackets = taxBracketRepository
                 .findByIsActiveTrueAndEffectiveDateLessThanEqualOrderByMinIncomeAsc(effectiveDate);
         if (brackets.isEmpty()) {
@@ -510,13 +544,8 @@ public class PayslipServiceImpl implements PayslipService {
             return ZERO;
         }
 
-        // Tax rate in database is in percentage (5, 10, 15, etc), need to divide by 100
-        BigDecimal rate = BigDecimal.valueOf(bracket.getTaxRate()).divide(BigDecimal.valueOf(100), 6,
-                RoundingMode.HALF_UP);
-        BigDecimal tax = assessableIncome
-                .multiply(rate)
-                .setScale(2, RoundingMode.HALF_UP);
-        return tax.max(ZERO);
+        // Return tax rate as percentage (5, 10, 15, etc)
+        return BigDecimal.valueOf(bracket.getTaxRate());
     }
 
     // Lấy tiền miễn trừ cố định trong thuế dựa vào thu nhập tính thuế
@@ -603,5 +632,85 @@ public class PayslipServiceImpl implements PayslipService {
     private String buildUtf8Filename(String payrollPeriodName) {
         String safeName = (payrollPeriodName == null || payrollPeriodName.isBlank()) ? "ky-luong" : payrollPeriodName;
         return "bao-cao-luong-thang-" + safeName + ".pdf";
+    }
+
+    /**
+     * Duyệt nhiều phiếu lương theo danh sách
+     */
+    @Override
+    public String bulkApprove(List<UUID> ids) {
+        int successCount = 0;
+        int failureCount = 0;
+        StringBuilder failures = new StringBuilder();
+
+        for (UUID id : ids) {
+            try {
+                approve(id);
+                successCount++;
+            } catch (Exception e) {
+                failureCount++;
+                failures.append("ID ").append(id).append(": ").append(e.getMessage()).append("; ");
+            }
+        }
+
+        String message = "Duyệt thành công " + successCount + " phiếu lương";
+        if (failureCount > 0) {
+            message += ", thất bại " + failureCount + " phiếu lương: " + failures.toString().trim();
+        }
+        return message;
+    }
+    
+
+    /**
+     * Hủy duyệt nhiều phiếu lương theo danh sách
+     */
+    @Override
+    public String bulkUnApprove(List<UUID> ids) {
+        int successCount = 0;
+        int failureCount = 0;
+        StringBuilder failures = new StringBuilder();
+
+        for (UUID id : ids) {
+            try {
+                unApprove(id);
+                successCount++;
+            } catch (Exception e) {
+                failureCount++;
+                failures.append("ID ").append(id).append(": ").append(e.getMessage()).append("; ");
+            }
+        }
+
+        String message = "Hủy duyệt thành công " + successCount + " phiếu lương";
+        if (failureCount > 0) {
+            message += ", thất bại " + failureCount + " phiếu lương: " + failures.toString().trim();
+        }
+        return message;
+    }
+
+    /**
+     * Hủy duyệt bảng lương
+     */
+    @Override
+    @Transactional
+    public void unApprove(UUID id) {
+        Payslip payslip = findById(id);
+        payslip.setStatus(Payslip.Status.PENDING);
+        payslipRepository.save(payslip);
+
+        actionLogUtil.logCancel(
+                id,
+                "PAYSLIP",
+                "Hủy duyệt bảng lương nhân viên: " + payslip.getEmployee().getEmployeeCode(),
+                securityUtil.getCurrentUsername());
+    }
+
+    /**
+     * Lấy danh sách ID theo filter (không phân trang)
+     */
+    @Override
+    public List<UUID> getIdsByFilter(java.util.Map<String, Object> filters) {
+        Specification<Payslip> spec = buildSpec(filters);
+        List<Payslip> payslips = payslipRepository.findAll(spec);
+        return payslips.stream().map(Payslip::getId).collect(Collectors.toList());
     }
 }

@@ -20,7 +20,9 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 public class SalaryAdjustmentServiceImpl implements SalaryAdjustmentService {
@@ -272,5 +274,68 @@ public class SalaryAdjustmentServiceImpl implements SalaryAdjustmentService {
                 "SALARY_ADJUSTMENT",
                 "Hủy duyệt điều chỉnh lương nhân viên: " + adjustment.getEmployee().getEmployeeCode(),
                 securityUtil.getCurrentUsername());
+    }
+
+    /**
+     * Duyệt nhiều điều chỉnh lương theo danh sách
+     */
+    @Override
+    public String bulkApprove(List<UUID> ids) {
+        int successCount = 0;
+        int failureCount = 0;
+        StringBuilder failures = new StringBuilder();
+
+        for (UUID id : ids) {
+            try {
+                approve(id);
+                successCount++;
+            } catch (Exception e) {
+                failureCount++;
+                failures.append("ID ").append(id).append(": ").append(e.getMessage()).append("; ");
+            }
+        }
+
+        String message = "Duyệt thành công " + successCount + " bản ghi";
+        if (failureCount > 0) {
+            message += ", thất bại " + failureCount + " bản ghi: " + failures.toString().trim();
+        }
+        return message;
+    }
+
+    /**
+     * Hủy duyệt nhiều điều chỉnh lương theo danh sách
+     */
+    @Override
+    public String bulkUnApprove(List<UUID> ids) {
+        int successCount = 0;
+        int failureCount = 0;
+        StringBuilder failures = new StringBuilder();
+
+        for (UUID id : ids) {
+            try {
+                unApprove(id);
+                successCount++;
+            } catch (Exception e) {
+                failureCount++;
+                failures.append("ID ").append(id).append(": ").append(e.getMessage()).append("; ");
+            }
+        }
+
+        String message = "Hủy duyệt thành công " + successCount + " bản ghi";
+        if (failureCount > 0) {
+            message += ", thất bại " + failureCount + " bản ghi: " + failures.toString().trim();
+        }
+        return message;
+    }
+
+    /**
+     * Lấy danh sách ID theo filter (không phân trang)
+     */
+    @Override
+    public List<UUID> getIdsByFilter(SalaryAdjustmentSearchRequest request) {
+        var filter = request != null ? request.getWhere() : null;
+        Specification<SalaryAdjustment> spec = buildSpec(filter);
+        List<SalaryAdjustment> adjustments = repository.findAll(spec);
+        return adjustments.stream().map(SalaryAdjustment::getId).collect(Collectors.toList());
     }
 }

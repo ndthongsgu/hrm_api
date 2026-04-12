@@ -8,6 +8,12 @@ import com.hrm.hrm_api.modules.entity.Payslip;
 import com.hrm.hrm_api.modules.service.payslip.MonthlyPayrollReportExport;
 import com.hrm.hrm_api.modules.service.payslip.PayslipService;
 import com.hrm.hrm_api.modules.util.PaginationUtils;
+
+import jakarta.validation.Valid;
+
+import java.util.List;
+import java.util.UUID;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
@@ -17,10 +23,9 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.util.UriUtils;
-
-import jakarta.validation.Valid;
 import java.nio.charset.StandardCharsets;
-import java.util.UUID;
+
+import com.hrm.hrm_api.modules.dto.request.BulkIdsRequest;
 
 @RestController
 @RequestMapping("/api/payslips")
@@ -59,6 +64,16 @@ public class PayslipController {
         return ResponseEntity.ok(BaseResponse.ok(service.generateForEmployee(payrollPeriodId, employeeId)));
     }
 
+    /**
+     * Tạo nhiều phiếu lương cho danh sách nhân viên
+     */
+    @PostMapping("/generate/{payrollPeriodId}/bulk")
+    @RequirePermission(module = "PAYROLL", action = PermissionDefinition.CREATE)
+    public ResponseEntity<BaseResponse<String>> generateBulkForEmployees(@PathVariable UUID payrollPeriodId, @RequestBody BulkIdsRequest request) {
+        String message = service.generateBulkForEmployees(payrollPeriodId, request.getIds());
+        return ResponseEntity.ok(BaseResponse.ok(message));
+    }
+
     @PutMapping("/{id}")
     @RequirePermission(module = "PAYROLL", action = PermissionDefinition.UPDATE)
     public ResponseEntity<BaseResponse<Payslip>> update(@PathVariable java.util.UUID id, @Valid @RequestBody Payslip payload) {
@@ -92,6 +107,36 @@ public class PayslipController {
         return ResponseEntity.ok(BaseResponse.ok("Duyệt phiếu lương thành công"));
     }
 
+    /**
+     * Hủy duyệt phiếu lương (Unapprove) - Trả về trạng thái chờ duyệt để có thể chỉnh sửa lại
+     */
+    @PostMapping("/{id}/unApprove")
+    @RequirePermission(module = "PAYROLL", action = PermissionDefinition.APPROVE)
+    public ResponseEntity<BaseResponse<String>> unApprove(@PathVariable java.util.UUID id) {
+        service.unApprove(id);
+        return ResponseEntity.ok(BaseResponse.ok("Hủy duyệt phiếu lương thành công"));
+    }
+
+    /**
+     * Duyệt nhiều phiếu lương theo danh sách
+     */
+    @PostMapping("/bulk-approve")
+    @RequirePermission(module = "PAYROLL", action = PermissionDefinition.APPROVE)
+    public ResponseEntity<BaseResponse<String>> bulkApprove(@RequestBody BulkIdsRequest request) {
+        String message = service.bulkApprove(request.getIds());
+        return ResponseEntity.ok(BaseResponse.ok(message));
+    }
+
+    /**
+     * Hủy duyệt nhiều phiếu lương theo danh sách
+     */
+    @PostMapping("/bulk-unapprove")
+    @RequirePermission(module = "PAYROLL", action = PermissionDefinition.APPROVE)
+    public ResponseEntity<BaseResponse<String>> bulkUnApprove(@RequestBody BulkIdsRequest request) {
+        String message = service.bulkUnApprove(request.getIds());
+        return ResponseEntity.ok(BaseResponse.ok(message));
+    }
+
     @GetMapping(value = "/export/monthly-report/{payrollPeriodId}", produces = {MediaType.APPLICATION_PDF_VALUE, MediaType.APPLICATION_JSON_VALUE})
     @RequirePermission(module = "PAYROLL", action = PermissionDefinition.EXPORT)
         public ResponseEntity<?> exportMonthlyReport(@PathVariable UUID payrollPeriodId) {
@@ -116,5 +161,15 @@ public class PayslipController {
     @GetMapping("/employee/{employeeId}/payroll-period/{payrollPeriodId}")
     public ResponseEntity<BaseResponse<Payslip>> getByEmployeeAndPayrollPeriod(@PathVariable UUID employeeId, @PathVariable UUID payrollPeriodId) {
         return ResponseEntity.ok(BaseResponse.ok(service.findByEmployeeAndPayrollPeriod(employeeId, payrollPeriodId)));
+    }
+
+    /**
+     * Lấy danh sách ID theo filter (không phân trang)
+     */
+    @PostMapping("/ids-by-filter")
+    @RequirePermission(module = "PAYROLL", action = PermissionDefinition.READ)
+    public ResponseEntity<BaseResponse<List<UUID>>> getIdsByFilter(@RequestBody(required = false) java.util.Map<String, Object> filters) {
+        List<UUID> ids = service.getIdsByFilter(filters);
+        return ResponseEntity.ok(BaseResponse.ok(ids));
     }
 }

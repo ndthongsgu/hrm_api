@@ -20,4 +20,6 @@ public interface PayrollPeriodService {
     void approve(UUID id);
     void unApprove(UUID id);
     List<SelectOptionDto> getMobileSelectOptions();
+    void bulkApprove(List<UUID> ids);
+    void bulkUnApprove(List<UUID> ids);
 }
