@@ -1,19 +1,23 @@
 package com.hrm.hrm_api.modules.service.dailyattendance;
 
+import com.hrm.hrm_api.modules.dto.base.PaginationResponse;
 import com.hrm.hrm_api.modules.dto.request.AttendanceCheckInRequest;
+import com.hrm.hrm_api.modules.dto.request.DailyAttendanceCreateRequest;
+import com.hrm.hrm_api.modules.dto.request.DailyAttendanceSearchRequest;
+import com.hrm.hrm_api.modules.dto.request.DailyAttendanceUpdateRequest;
 import com.hrm.hrm_api.modules.dto.response.AttendanceCheckInResponse;
 import com.hrm.hrm_api.modules.entity.DailyAttendance;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
 import java.util.UUID;
 
 public interface DailyAttendanceService {
-    Page<DailyAttendance> findAll(Pageable pageable);
+    PaginationResponse<DailyAttendance> search(DailyAttendanceSearchRequest request, Pageable pageable);
     DailyAttendance findById(UUID id);
-    DailyAttendance create(DailyAttendance entity);
-    DailyAttendance update(UUID id, DailyAttendance entity);
-    void delete(UUID id);
+    DailyAttendance create(DailyAttendanceCreateRequest request);
+    DailyAttendance update(UUID id, DailyAttendanceUpdateRequest request);
+    void deactivate(UUID id);
+    void activate(UUID id);
     
     /**
      * Check-in attendance with face verification and location validation

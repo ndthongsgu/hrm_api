@@ -1,15 +1,16 @@
 package com.hrm.hrm_api.modules.controller;
 
 import com.hrm.hrm_api.modules.dto.base.BaseResponse;
-import com.hrm.hrm_api.modules.dto.base.PageResponse;
+import com.hrm.hrm_api.modules.dto.base.PaginationResponse;
 import com.hrm.hrm_api.modules.dto.request.AttendanceCheckInRequest;
+import com.hrm.hrm_api.modules.dto.request.DailyAttendanceSearchRequest;
+import com.hrm.hrm_api.modules.dto.request.DailyAttendanceCreateRequest;
 import com.hrm.hrm_api.modules.dto.response.AttendanceCheckInResponse;
+import com.hrm.hrm_api.modules.dto.request.DailyAttendanceUpdateRequest;
 import com.hrm.hrm_api.modules.entity.DailyAttendance;
-import com.hrm.hrm_api.modules.entity.WorkShift;
 import com.hrm.hrm_api.modules.service.dailyattendance.DailyAttendanceService;
-import com.hrm.hrm_api.modules.util.PaginationUtils;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -17,6 +18,7 @@ import org.springframework.web.bind.annotation.*;
 import jakarta.validation.Valid;
 import java.time.LocalDate;
 import java.util.HashMap;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/daily-attendances")
@@ -28,31 +30,40 @@ public class DailyAttendanceController {
         this.service = service;
     }
 
-    @GetMapping
-    public ResponseEntity<BaseResponse<PageResponse<DailyAttendance>>> list(@PageableDefault(size = 20) Pageable pageable) {
-        Page<DailyAttendance> page = service.findAll(pageable);
-        return ResponseEntity.ok(BaseResponse.ok(PaginationUtils.toPageResponse(page)));
+    @PostMapping("/search")
+    public ResponseEntity<BaseResponse<PaginationResponse<DailyAttendance>>> search(@RequestBody(required = false) DailyAttendanceSearchRequest request, @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        PaginationResponse<DailyAttendance> response = service.search(request, pageable);
+        return ResponseEntity.ok(BaseResponse.ok(response));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<BaseResponse<DailyAttendance>> getById(@PathVariable java.util.UUID id) {
+    public ResponseEntity<BaseResponse<DailyAttendance>> getById(@PathVariable UUID id) {
         return ResponseEntity.ok(BaseResponse.ok(service.findById(id)));
     }
 
     @PostMapping
-    public ResponseEntity<BaseResponse<DailyAttendance>> create(@Valid @RequestBody DailyAttendance payload) {
+    public ResponseEntity<BaseResponse<DailyAttendance>> create(@Valid @RequestBody DailyAttendanceCreateRequest payload) {
         return ResponseEntity.ok(BaseResponse.ok(service.create(payload)));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<BaseResponse<DailyAttendance>> update(@PathVariable java.util.UUID id, @Valid @RequestBody DailyAttendance payload) {
+    public ResponseEntity<BaseResponse<DailyAttendance>> update(@PathVariable UUID id, @Valid @RequestBody DailyAttendanceUpdateRequest payload) {
         return ResponseEntity.ok(BaseResponse.ok(service.update(id, payload)));
     }
 
-    @DeleteMapping("/{id}")
-    public ResponseEntity<BaseResponse<Void>> delete(@PathVariable java.util.UUID id) {
-        service.delete(id);
-        return ResponseEntity.ok(BaseResponse.ok(null));
+    @DeleteMapping("/{id}/deactivate")
+    public ResponseEntity<BaseResponse<String>> deactivate(@PathVariable UUID id) {
+        service.deactivate(id);
+        return ResponseEntity.ok(BaseResponse.ok("Ngừng hoạt động chấm công thành công"));
+    }
+
+    /**
+     * Kích hoạt lại chấm công (Soft delete recovery)
+     */
+    @PutMapping("/{id}/activate")
+    public ResponseEntity<BaseResponse<String>> activate(@PathVariable UUID id) {
+        service.activate(id);
+        return ResponseEntity.ok(BaseResponse.ok("Kích hoạt lại chấm công thành công"));
     }
 
     /**

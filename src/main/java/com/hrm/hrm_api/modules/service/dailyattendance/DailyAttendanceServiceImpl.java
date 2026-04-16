@@ -1,19 +1,29 @@
 package com.hrm.hrm_api.modules.service.dailyattendance;
 
 import com.hrm.hrm_api.common.exception.ResourceNotFoundException;
+import com.hrm.hrm_api.common.security.SecurityUtil;
 import com.hrm.hrm_api.modules.client.FaceVerificationClient;
+import com.hrm.hrm_api.modules.dto.base.PaginationResponse;
+import com.hrm.hrm_api.modules.dto.dailyattendance.DailyAttendanceFilter;
 import com.hrm.hrm_api.modules.dto.request.AttendanceCheckInRequest;
+import com.hrm.hrm_api.modules.dto.request.DailyAttendanceCreateRequest;
+import com.hrm.hrm_api.modules.dto.request.DailyAttendanceSearchRequest;
+import com.hrm.hrm_api.modules.dto.request.DailyAttendanceUpdateRequest;
 import com.hrm.hrm_api.modules.dto.response.AttendanceCheckInResponse;
 import com.hrm.hrm_api.modules.entity.DailyAttendance;
 import com.hrm.hrm_api.modules.entity.Employee;
 import com.hrm.hrm_api.modules.entity.EmployeeShiftAssignment;
 import com.hrm.hrm_api.modules.entity.OfficeLocation;
+import com.hrm.hrm_api.modules.entity.WorkShift;
 import com.hrm.hrm_api.modules.repository.DailyAttendanceRepository;
 import com.hrm.hrm_api.modules.repository.EmployeeRepository;
 import com.hrm.hrm_api.modules.repository.EmployeeShiftAssignmentRepository;
+import com.hrm.hrm_api.modules.util.ActionLogUtil;
 import lombok.extern.slf4j.Slf4j;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,22 +41,23 @@ public class DailyAttendanceServiceImpl implements DailyAttendanceService {
     private final EmployeeRepository employeeRepository;
     private final EmployeeShiftAssignmentRepository employeeShiftAssignmentRepository;
     private final FaceVerificationClient faceVerificationClient;
+    private final ActionLogUtil actionLogUtil;
+    private final SecurityUtil securityUtil;
 
     public DailyAttendanceServiceImpl(
         DailyAttendanceRepository repository,
         EmployeeRepository employeeRepository,
         EmployeeShiftAssignmentRepository employeeShiftAssignmentRepository,
-        FaceVerificationClient faceVerificationClient
+        FaceVerificationClient faceVerificationClient,
+        ActionLogUtil actionLogUtil,
+        SecurityUtil securityUtil
     ) {
         this.repository = repository;
         this.employeeRepository = employeeRepository;
         this.employeeShiftAssignmentRepository = employeeShiftAssignmentRepository;
         this.faceVerificationClient = faceVerificationClient;
-    }
-
-    @Override
-    public Page<DailyAttendance> findAll(Pageable pageable) {
-        return repository.findAll(pageable);
+        this.actionLogUtil = actionLogUtil;
+        this.securityUtil = securityUtil;
     }
 
     @Override
@@ -56,25 +67,211 @@ public class DailyAttendanceServiceImpl implements DailyAttendanceService {
 
     @Override
     @Transactional
-    public DailyAttendance create(DailyAttendance entity) {
-        return repository.save(entity);
-    }
+    public DailyAttendance create(DailyAttendanceCreateRequest request) {
+        // Create new DailyAttendance entity
+        DailyAttendance entity = new DailyAttendance();
 
-    @Override
-    @Transactional
-    public DailyAttendance update(UUID id, DailyAttendance entity) {
-        findById(id);
-        entity.setId(id);
-        return repository.save(entity);
-    }
+        // Set employee
+        Employee employee = employeeRepository.findById(request.getEmployeeId())
+                .orElseThrow(() -> new ResourceNotFoundException(Employee.class, request.getEmployeeId()));
+        entity.setEmployee(employee);
 
-    @Override
-    @Transactional
-    public void delete(UUID id) {
-        if (!repository.existsById(id)) {
-            throw new ResourceNotFoundException(DailyAttendance.class, id);
+        // Set date
+        entity.setDate(request.getDate());
+
+        // Set check-in/check-out times if provided
+        if (request.getCheckInTime() != null) {
+            entity.setCheckInTime(request.getCheckInTime());
         }
-        repository.deleteById(id);
+        if (request.getCheckOutTime() != null) {
+            entity.setCheckOutTime(request.getCheckOutTime());
+        }
+
+        // Set status
+        entity.setStatus(DailyAttendance.Status.valueOf(request.getStatus()));
+
+        // Get employee's shift assignment for the date
+        EmployeeShiftAssignment shiftAssignment = employeeShiftAssignmentRepository
+                .findActiveAssignmentOnDate(request.getEmployeeId(), request.getDate())
+                .orElse(null);
+
+        if (shiftAssignment != null) {
+            entity.setShift(shiftAssignment.getShift());
+
+            // Calculate derived fields if both check-in and check-out times are provided
+            if (request.getCheckInTime() != null && request.getCheckOutTime() != null) {
+                calculateAttendanceFields(entity, shiftAssignment.getShift());
+            }
+        }
+
+        DailyAttendance savedAttendance = repository.save(entity);
+
+        actionLogUtil.logCreate(
+            savedAttendance.getId(),
+            "DAILY_ATTENDANCE",
+            "Tạo chấm công cho nhân viên: " + savedAttendance.getEmployee().getFullName() + " ngày " + savedAttendance.getDate(),
+            securityUtil.getCurrentUsername());
+
+        return savedAttendance;
+    }
+
+    @Override
+    @Transactional
+    public DailyAttendance update(UUID id, DailyAttendanceUpdateRequest request) {
+        DailyAttendance existing = findById(id);
+
+        // Update only the fields that are provided
+        if (request.getEmployeeId() != null) {
+            Employee employee = employeeRepository.findById(request.getEmployeeId())
+                    .orElseThrow(() -> new ResourceNotFoundException(Employee.class, request.getEmployeeId()));
+            existing.setEmployee(employee);
+        }
+        if (request.getDate() != null) {
+            existing.setDate(request.getDate());
+        }
+        if (request.getCheckInTime() != null) {
+            existing.setCheckInTime(request.getCheckInTime());
+        }
+        if (request.getCheckOutTime() != null) {
+            existing.setCheckOutTime(request.getCheckOutTime());
+        }
+        if (request.getStatus() != null) {
+            existing.setStatus(DailyAttendance.Status.valueOf(request.getStatus()));
+        }
+
+        // Recalculate derived fields if times changed
+        if (request.getCheckInTime() != null || request.getCheckOutTime() != null) {
+            // TODO: Implement recalculation of lateMinutes, earlyMinutes, workingHours based on shift
+        }
+
+        DailyAttendance updatedAttendance = repository.save(existing);
+
+        actionLogUtil.logUpdate(
+            id,
+            "DAILY_ATTENDANCE",
+            "Cập nhật chấm công cho nhân viên: " + updatedAttendance.getEmployee().getFullName() + " ngày " + updatedAttendance.getDate(),
+            securityUtil.getCurrentUsername());
+
+        return updatedAttendance;
+    }
+
+    /**
+     * Calculate derived attendance fields based on shift and check-in/check-out times
+     */
+    private void calculateAttendanceFields(DailyAttendance attendance, WorkShift shift) {
+        if (attendance.getCheckInTime() == null || attendance.getCheckOutTime() == null || shift == null) {
+            return;
+        }
+
+        LocalTime checkInTime = attendance.getCheckInTime().toLocalTime();
+        LocalTime checkOutTime = attendance.getCheckOutTime().toLocalTime();
+        LocalTime shiftStartTime = shift.getStartTime();
+        LocalTime shiftEndTime = shift.getEndTime();
+
+        // Calculate late minutes
+        if (checkInTime.isAfter(shiftStartTime)) {
+            attendance.setLateMinutes((int) ChronoUnit.MINUTES.between(shiftStartTime, checkInTime));
+        } else {
+            attendance.setLateMinutes(0);
+        }
+
+        // Calculate early minutes
+        if (checkOutTime.isBefore(shiftEndTime)) {
+            attendance.setEarlyMinutes((int) ChronoUnit.MINUTES.between(checkOutTime, shiftEndTime));
+        } else {
+            attendance.setEarlyMinutes(0);
+        }
+
+        // Calculate working hours
+        long minutesWorked = ChronoUnit.MINUTES.between(attendance.getCheckInTime(), attendance.getCheckOutTime());
+        attendance.setWorkingHours((float) (minutesWorked / 60.0));
+
+        // Update status based on late/early minutes
+        if (attendance.getLateMinutes() > 0) {
+            attendance.setStatus(DailyAttendance.Status.LATE);
+        } else if (attendance.getEarlyMinutes() > 0) {
+            attendance.setStatus(DailyAttendance.Status.EARLY);
+        } else {
+            attendance.setStatus(DailyAttendance.Status.OK);
+        }
+    }
+
+    @Override
+    @Transactional
+    public void deactivate(UUID id) {
+        DailyAttendance attendance = findById(id);
+        attendance.setIsDeleted(true);
+        repository.save(attendance);
+
+        actionLogUtil.logDeactivate(
+            id,
+            "DAILY_ATTENDANCE",
+            "Ngừng hoạt động chấm công cho nhân viên: " + attendance.getEmployee().getFullName() + " ngày " + attendance.getDate(),
+            securityUtil.getCurrentUsername());
+    }
+
+    @Override
+    @Transactional
+    public void activate(UUID id) {
+        DailyAttendance attendance = repository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(DailyAttendance.class, id));
+        attendance.setIsDeleted(false);
+        repository.save(attendance);
+
+        actionLogUtil.logActivate(
+            id,
+            "DAILY_ATTENDANCE",
+            "Kích hoạt lại chấm công cho nhân viên: " + attendance.getEmployee().getFullName() + " ngày " + attendance.getDate(),
+            securityUtil.getCurrentUsername());
+    }
+
+    private Specification<DailyAttendance> buildSpec(DailyAttendanceFilter filter) {
+        return (root, query, cb) -> {
+            var predicates = new java.util.ArrayList<jakarta.persistence.criteria.Predicate>();
+
+            if (filter.getEmployeeId() != null) {
+                predicates.add(cb.equal(root.get("employee").get("id"), filter.getEmployeeId()));
+            }
+
+            if (filter.getShiftId() != null) {
+                predicates.add(cb.equal(root.get("shift").get("id"), filter.getShiftId()));
+            }
+
+            if (filter.getDate() != null) {
+                predicates.add(cb.equal(root.get("date"), filter.getDate()));
+            }
+
+            if (filter.getStartDate() != null) {
+                predicates.add(cb.greaterThanOrEqualTo(root.get("date"), filter.getStartDate()));
+            }
+
+            if (filter.getEndDate() != null) {
+                predicates.add(cb.lessThanOrEqualTo(root.get("date"), filter.getEndDate()));
+            }
+
+            if (filter.getStatus() != null) {
+                predicates.add(cb.equal(root.get("status"), filter.getStatus()));
+            }
+
+            if (filter.getIsDeleted() != null) {
+                predicates.add(cb.equal(root.get("isDeleted"), filter.getIsDeleted()));
+            }
+
+            return cb.and(predicates.toArray(new jakarta.persistence.criteria.Predicate[0]));
+        };
+    }
+
+    @Override
+    public PaginationResponse<DailyAttendance> search(DailyAttendanceSearchRequest request, Pageable pageable) {
+        var filter = request != null ? request.getWhere() : null;
+
+        Page<DailyAttendance> attendances = repository.findAll(buildSpec(filter), pageable);
+
+        return PaginationResponse.of(
+                attendances.getContent(),
+                attendances.getTotalElements(),
+                attendances.getNumber(),
+                attendances.getSize());
     }
 
     @Override
@@ -311,7 +508,7 @@ public class DailyAttendanceServiceImpl implements DailyAttendanceService {
         // Calculate work_hours (duration from check-in to check-out)
         if (attendance.getCheckInTime() != null && attendance.getCheckOutTime() != null) {
             long minutesWorked = ChronoUnit.MINUTES.between(attendance.getCheckInTime(), attendance.getCheckOutTime());
-            float hoursWorked = minutesWorked / 60.0f;
+            Float hoursWorked = minutesWorked / 60.0f;
             attendance.setWorkingHours(hoursWorked);
             log.info("Employee {} work hours: {}", employeeId, hoursWorked);
         }
